@@ -29,7 +29,7 @@ public abstract class BaseServer<T> implements Server<T> {
         this.encdecFactory = encdecFactory;
 		this.sock = null;
         this.activeConnections=activeConnections;
-        idCounter=0;
+        int idCounter=0;
         
     }
 
@@ -49,6 +49,7 @@ public abstract class BaseServer<T> implements Server<T> {
                         clientSock,
                         encdecFactory.get(),
                         protocol);
+                activeConnections.addConnection(idCounter, handler);
                 protocol.start(idCounter++, activeConnections);// Supposed to add it to the acvtive connections itself, whichever class implements it
 
                 

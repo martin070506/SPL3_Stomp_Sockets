@@ -8,6 +8,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
     private ConcurrentHashMap<Integer, ConnectionHandler<T>> activeConnections;
     private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Boolean>> channelSubscribers;
+    private ConcurrentHashMap<Integer,String> loggedInUsers;
     private int connectionIdCounter;
 
 
@@ -52,8 +53,13 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
     }
 
-    
-    public void addConnection(int connectionId, ConnectionHandler<T> handler) {
+    //adds an *actual* connection as if a user sent a CONNECT packet with UN and PASS , actual login is in python and the packet  is gonna be handled in proccess (assumes it worked)
+    public void connect(int connectionId,String userName){ 
+       loggedInUsers.put(connectionId,userName);
+    }
+
+    //adds a *GENERAL* connection, as in someone is connected to the socket
+    public void addConnection(int connectionId, ConnectionHandler<T> handler) { 
 
         activeConnections.put(connectionId, handler);
     }
@@ -77,5 +83,6 @@ public class ConnectionsImpl<T> implements Connections<T> {
         if (subscribers.isEmpty())
             channelSubscribers.remove(channel);
     }
+    
     
 }
