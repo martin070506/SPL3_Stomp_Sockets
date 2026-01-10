@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 public abstract class BaseServer<T> implements Server<T> {
 
     private final int port;
-    private final Supplier<StompMessagingProtocol<T>> protocolFactory;
+    private final Supplier<StompMessagingProtocol<T>> stompProtocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ConnectionsImpl<T> activeConnections;
     private ServerSocket sock;
@@ -21,14 +21,13 @@ public abstract class BaseServer<T> implements Server<T> {
     public BaseServer(
             int port,
             Supplier<StompMessagingProtocol<T>> protocolFactory,
-            Supplier<MessageEncoderDecoder<T>> encdecFactory,
-            ConnectionsImpl<T> activeConnections) {
+            Supplier<MessageEncoderDecoder<T>> encdecFactory) {
 
         this.port = port;
-        this.protocolFactory = protocolFactory;
+        this.stompProtocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
-        this.activeConnections=activeConnections;
+        this.activeConnections=new ConnectionsImpl<>();
         int idCounter=0;
         
     }
@@ -44,18 +43,38 @@ public abstract class BaseServer<T> implements Server<T> {
             while (!Thread.currentThread().isInterrupted()) {
 
                 Socket clientSock = serverSock.accept();
-                StompMessagingProtocol<T> protocol =protocolFactory.get();
-                BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
-                        clientSock,
-                        encdecFactory.get(),
-                        protocol);
-                activeConnections.addConnection(idCounter, handler);
-                protocol.start(idCounter++, activeConnections);// Supposed to add it to the acvtive connections itself, whichever class implements it
+                final int currentUserId = idCounter; //so theres no problem in the finally block
+                idCounter++;
+                StompMessagingProtocol<T> protocol =stompProtocolFactory.get();
+                BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<T>(
+                    clientSock,
+                    encdecFactory.get(),
+                    protocol) 
+                {
+                // OVERRIDE RUN TO CATCH DISCONNECTS
+                @Override
+                public void run() {
+                    try {
+                        // Run the standard logic (read/write loop)
+                        super.run();
+                    } finally {
+                        // This block ALWAYS runs when the loop finishes 
+                        // (whether by crash, socket close, or logic)
+                        activeConnections.disconnect(currentUserId);
+                        System.out.println("User ID " + currentUserId + " disconnected.");
+                    }
+                }
+            };
+
+                activeConnections.addConnection(currentUserId, handler);
+                protocol.start(currentUserId, activeConnections);// Supposed to add it to the acvtive connections itself, whichever class implements it
 
                 
                 execute(handler);
             }
+           
         } catch (IOException ex) {
+
         }
 
         System.out.println("server closed!!!");

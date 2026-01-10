@@ -10,7 +10,7 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
     private byte[] bytesData=new byte[1<<10];
     int len = 0;
     public String decodeNextByte(byte nextByte){
-        if(nextByte== '\u0000'){ //TODO just put a random charchter to signify line end (i need to check what it actually is)
+        if(nextByte== '\u0000'){ 
             addByte(nextByte);
             return DecodeMessage(bytesData); // if actual message we return it
         }

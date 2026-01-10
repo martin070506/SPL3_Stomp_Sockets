@@ -34,21 +34,9 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
                 T nextMessage = encdec.decodeNextByte((byte) read);
-                if (nextMessage != null) {
+                if (nextMessage != null) 
                     protocol.process(nextMessage);
-                    // if (response != null) {
-                    //     out.write(encdec.encode(response));
-                    //     out.flush();
-                    // }
-
-                    /*
-                    I commented this out because the SMP proccess method is a void, so if theres a response or some error we'll handle it, but 
-                    the proccess is void so i cannot react to it RN because IDK the flow yet
-                    */
-                   // Im gonna need to somehow return the data to the out buffer
-                }
             }
-
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -63,6 +51,14 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-        //IMPLEMENT IF NEEDED
+        if (msg != null) 
+            try {
+                byte[] encodedMessage = encdec.encode(msg);
+                
+                out.write(encodedMessage);
+                out.flush();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
     }
 }
