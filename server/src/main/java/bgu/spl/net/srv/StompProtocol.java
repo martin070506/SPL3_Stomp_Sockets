@@ -4,7 +4,7 @@ import bgu.spl.net.api.StompMessagingProtocol;
 
 public class StompProtocol<T> implements StompMessagingProtocol<String> {
     public boolean shouldTerminate=false;
-    private ConnectionsImpl<String> connections;
+    private Connections<String> connections;
     private int connectionId;
     private static int msgIdCounter = 0;
 
@@ -14,7 +14,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
     
     public void start(int connectionId, Connections<String> connections){
          this.connectionId=connectionId;
-         this.connections=(ConnectionsImpl)connections;
+         this.connections=connections;
          shouldTerminate=false;
     }
     

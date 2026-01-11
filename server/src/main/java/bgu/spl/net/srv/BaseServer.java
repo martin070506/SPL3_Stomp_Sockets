@@ -14,7 +14,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private final int port;
     private final Supplier<StompMessagingProtocol<T>> stompProtocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
-    private ConnectionsImpl<T> activeConnections;
+    private Connections<T> activeConnections;
     private ServerSocket sock;
     private int idCounter;
 
@@ -22,12 +22,11 @@ public abstract class BaseServer<T> implements Server<T> {
             int port,
             Supplier<StompMessagingProtocol<T>> protocolFactory,
             Supplier<MessageEncoderDecoder<T>> encdecFactory) {
-
         this.port = port;
         this.stompProtocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
-        this.activeConnections=new ConnectionsImpl<>();
+        this.activeConnections=new ConnectionsImpl();
         int idCounter=0;
         
     }

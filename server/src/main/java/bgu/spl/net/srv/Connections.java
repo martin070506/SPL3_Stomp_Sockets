@@ -12,4 +12,20 @@ public interface Connections<T> {
     void send(String channel, T msg);
 
     void disconnect(int connectionId);
+
+    boolean connect(int connectionId,String username,String password);
+
+    boolean isSubscribed(String channel, int connectionId);
+
+    void subscribe(String channel,int connectionId , int subscriptionId);
+
+    void unsubscribe(int subscriptionId);
+
+    boolean isUserConnectedByUserName(String username) ;
+
+    boolean isUserConnectedById(int connectionId);
+
+    void addConnection(int connectionId, ConnectionHandler<T> connectionHandler);
+
+
 }

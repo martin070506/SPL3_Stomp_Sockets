@@ -5,9 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ConnectionsImpl<T> implements Connections<T> {
+public class ConnectionsImpl<T> implements Connections<String> {
 
-    private ConcurrentHashMap<Integer, ConnectionHandler<T>> activeConnections;
+    private ConcurrentHashMap<Integer, ConnectionHandler<String>> activeConnections;
     private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribersConnectionId; // channel -> (connectionId -> subscriptionId)
     private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribersSubscriptionId; // channel -> (subscriptionId -> connectionId)
     private ConcurrentHashMap<Integer, SubscriptionPair> subscriptionIdToPair; // subscriptionId -> (channel, connectionId)
@@ -26,7 +26,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
 
     @Override
-    public boolean send(int connectionId, T msg){
+    public boolean send(int connectionId, String msg){
 
         ConnectionHandler clientConnection = activeConnections.get(connectionId);
         if (clientConnection == null) 
@@ -39,7 +39,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
 
     @Override
-    public void send(String channel, T msg) {
+    public void send(String channel, String msg) {
         ConcurrentHashMap<Integer, Integer> subscribers = channelSubscribersConnectionId.get(channel);
 
         if (subscribers != null) {
@@ -55,7 +55,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
                             "\n" +
                             msg +
                             "\u0000";
-                send(connectionId, (T) frame); 
+                send(connectionId,  frame); 
             }
         }
     }
@@ -89,7 +89,8 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
     //adds a *GENERAL* connection, as in someone is connected to the socket
-    public void addConnection(int connectionId, ConnectionHandler<T> handler) { 
+    @Override
+    public void addConnection(int connectionId, ConnectionHandler<String> handler) { 
 
         activeConnections.put(connectionId, handler);
     }
