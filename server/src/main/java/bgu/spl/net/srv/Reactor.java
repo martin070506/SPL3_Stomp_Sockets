@@ -2,6 +2,8 @@ package bgu.spl.net.srv;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.MessagingProtocol;
+import bgu.spl.net.api.StompMessagingProtocol;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedSelectorException;
@@ -15,10 +17,12 @@ import java.util.function.Supplier;
 public class Reactor<T> implements Server<T> {
 
     private final int port;
-    private final Supplier<MessagingProtocol<T>> protocolFactory;
+    private final Supplier<StompMessagingProtocol<T>> stompProtocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> readerFactory;
     private final ActorThreadPool pool;
+    private final Connections<T> connection;
     private Selector selector;
+    private int idCounter = 0;
 
     private Thread selectorThread;
     private final ConcurrentLinkedQueue<Runnable> selectorTasks = new ConcurrentLinkedQueue<>();
@@ -26,13 +30,14 @@ public class Reactor<T> implements Server<T> {
     public Reactor(
             int numThreads,
             int port,
-            Supplier<MessagingProtocol<T>> protocolFactory,
+            Supplier<StompMessagingProtocol<T>> stompProtocolFactory,
             Supplier<MessageEncoderDecoder<T>> readerFactory) {
 
         this.pool = new ActorThreadPool(numThreads);
         this.port = port;
-        this.protocolFactory = protocolFactory;
+        this.stompProtocolFactory = stompProtocolFactory;
         this.readerFactory = readerFactory;
+        this.connection = new ConnectionsImpl();
     }
 
     @Override
@@ -53,19 +58,15 @@ public class Reactor<T> implements Server<T> {
                 selector.select();
                 runSelectionThreadTasks();
 
-                for (SelectionKey key : selector.selectedKeys()) {
-
-                    if (!key.isValid()) {
+                for (SelectionKey key : selector.selectedKeys())
+                    if (!key.isValid()) 
                         continue;
-                    } else if (key.isAcceptable()) {
+                    else if (key.isAcceptable()) 
                         handleAccept(serverSock, selector);
-                    } else {
+                    else 
                         handleReadWrite(key);
-                    }
-                }
 
                 selector.selectedKeys().clear(); //clear the selected keys set so that we can know about new events
-
             }
 
         } catch (ClosedSelectorException ex) {
@@ -79,11 +80,12 @@ public class Reactor<T> implements Server<T> {
         pool.shutdown();
     }
 
-    /*package*/ void updateInterestedOps(SocketChannel chan, int ops) {
+    /*package*/ 
+    void updateInterestedOps(SocketChannel chan, int ops) {
         final SelectionKey key = chan.keyFor(selector);
-        if (Thread.currentThread() == selectorThread) {
+        if (Thread.currentThread() == selectorThread) 
             key.interestOps(ops);
-        } else {
+        else {
             selectorTasks.add(() -> {
                 key.interestOps(ops);
             });
@@ -95,11 +97,16 @@ public class Reactor<T> implements Server<T> {
     private void handleAccept(ServerSocketChannel serverChan, Selector selector) throws IOException {
         SocketChannel clientChan = serverChan.accept();
         clientChan.configureBlocking(false);
+        StompMessagingProtocol<T> protocol = stompProtocolFactory.get();
         final NonBlockingConnectionHandler<T> handler = new NonBlockingConnectionHandler<>(
                 readerFactory.get(),
-                protocolFactory.get(),
+                protocol,
                 clientChan,
                 this);
+        final int currentUserId = idCounter; 
+        idCounter++;
+        connection.addConnection(currentUserId, handler);
+        protocol.start(currentUserId, connection);
         clientChan.register(selector, SelectionKey.OP_READ, handler);
     }
 
@@ -109,25 +116,21 @@ public class Reactor<T> implements Server<T> {
 
         if (key.isReadable()) {
             Runnable task = handler.continueRead();
-            if (task != null) {
+            if (task != null) 
                 pool.submit(handler, task);
-            }
         }
 
-	    if (key.isValid() && key.isWritable()) {
+	    if (key.isValid() && key.isWritable()) 
             handler.continueWrite();
-        }
     }
 
     private void runSelectionThreadTasks() {
-        while (!selectorTasks.isEmpty()) {
+        while (!selectorTasks.isEmpty())
             selectorTasks.remove().run();
-        }
     }
 
     @Override
     public void close() throws IOException {
         selector.close();
     }
-
 }

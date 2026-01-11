@@ -26,8 +26,8 @@ public abstract class BaseServer<T> implements Server<T> {
         this.stompProtocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
-        this.activeConnections=new ConnectionsImpl();
-        int idCounter=0;
+        this.activeConnections = new ConnectionsImpl();
+        int idCounter = 0;
         
     }
 
@@ -44,21 +44,18 @@ public abstract class BaseServer<T> implements Server<T> {
                 Socket clientSock = serverSock.accept();
                 final int currentUserId = idCounter; //so theres no problem in the finally block
                 idCounter++;
-                StompMessagingProtocol<T> protocol =stompProtocolFactory.get();
+                StompMessagingProtocol<T> protocol = stompProtocolFactory.get();
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<T>(
                     clientSock,
                     encdecFactory.get(),
-                    protocol) 
-                {
+                    protocol) {
                 // OVERRIDE RUN TO CATCH DISCONNECTS
+
                 @Override
                 public void run() {
                     try {
-                        // Run the standard logic (read/write loop)
                         super.run();
                     } finally {
-                        // This block ALWAYS runs when the loop finishes 
-                        // (whether by crash, socket close, or logic)
                         activeConnections.disconnect(currentUserId);
                         System.out.println("User ID " + currentUserId + " disconnected.");
                     }
@@ -68,13 +65,9 @@ public abstract class BaseServer<T> implements Server<T> {
                 activeConnections.addConnection(currentUserId, handler);
                 protocol.start(currentUserId, activeConnections);// Supposed to add it to the acvtive connections itself, whichever class implements it
 
-                
                 execute(handler);
             }
-           
-        } catch (IOException ex) {
-
-        }
+        } catch (IOException ex) {}
 
         System.out.println("server closed!!!");
     }

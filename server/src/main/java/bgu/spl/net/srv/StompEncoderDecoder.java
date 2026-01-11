@@ -27,7 +27,6 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
     @Override
     public byte[] encode(String message) {
         return (message + '\u0000').getBytes(); //uses utf8 by default
-        
     }
     
     private String DecodeMessage(byte[] bytes){
@@ -37,9 +36,9 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
     }
 
     private void addByte(byte Byte){
-        if(len==bytesData.length){
+        if (len == bytesData.length)
             bytesData=Arrays.copyOf(bytesData,len*2);
-        }
+            
         bytesData[len++]=Byte;
     }
     

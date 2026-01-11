@@ -68,23 +68,19 @@ public class ConnectionsImpl<T> implements Connections<String> {
         loggedInUsers.remove(connectionId);
         for (String channel : channelSubscribersConnectionId.keySet()) 
             if (channelSubscribersConnectionId.get(channel).containsKey(connectionId)){
-                int subscriptionId=channelSubscribersConnectionId.get(channel).remove(connectionId);
+                int subscriptionId = channelSubscribersConnectionId.get(channel).remove(connectionId);
                 channelSubscribersSubscriptionId.get(channel).remove(subscriptionId);
                 subscriptionIdToPair.remove(subscriptionId);
             }
-               
-
     }
 
     //adds an *actual* connection as if a user sent a CONNECT packet with UN and PASS , actual login is in python and the packet  is gonna be handled in proccess (assumes it worked)
-    public boolean connect(int connectionId,String userName,String password){ 
-       try{
+    public boolean connect(int connectionId, String userName, String password) { 
+       try {
         // some processing to check if the userName and password are valid
         loggedInUsers.put(connectionId, userName);
-       }
-       catch (Exception e){
-        
-       }
+       } catch (Exception e){}
+
        return false; //just a placeholder until i know how to access the user data base
     }
 
@@ -98,27 +94,28 @@ public class ConnectionsImpl<T> implements Connections<String> {
 
     public void subscribe(String channel, int connectionId,int subscriptionId) {
 
-        if (!channelSubscribersConnectionId.containsKey(channel)){
+        if (!channelSubscribersConnectionId.containsKey(channel)) {
             channelSubscribersConnectionId.putIfAbsent(channel, new ConcurrentHashMap<Integer, Integer>());
             channelSubscribersSubscriptionId.putIfAbsent(channel, new ConcurrentHashMap<Integer, Integer>());
-            
         }
            
-
         ConcurrentHashMap<Integer, Integer> subscribersByCid = channelSubscribersConnectionId.get(channel);
         subscribersByCid.put(connectionId, subscriptionId); 
         ConcurrentHashMap<Integer, Integer> subscribersBySid = channelSubscribersSubscriptionId.get(channel);
         subscribersBySid.put(subscriptionId, connectionId);
 
         subscriptionIdToPair.putIfAbsent(subscriptionId, new SubscriptionPair(connectionId, channel));
+
+        //SOMETHING WITH DB
     }
 
 
     public void unsubscribe(int subscriptionId) {
        
         SubscriptionPair pair = subscriptionIdToPair.get(subscriptionId);
-        if(pair==null)
-           return;
+        if (pair == null)
+            return;
+
         String channel = pair.getChannel();
         int connectionId = pair.getUserId();
 
@@ -132,10 +129,10 @@ public class ConnectionsImpl<T> implements Connections<String> {
     public boolean isUserConnectedByUserName(String userName) {
         return loggedInUsers.containsValue(userName);
     }
+    
     public boolean isUserConnectedById(int connectionId) {
         return loggedInUsers.containsKey(connectionId);
     }
-    
     
     public boolean isSubscribed(String channel, int connectionId) {
         ConcurrentHashMap<Integer, Integer> subs = channelSubscribersConnectionId.get(channel);

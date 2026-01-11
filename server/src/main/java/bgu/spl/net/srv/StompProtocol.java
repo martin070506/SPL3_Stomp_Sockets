@@ -82,9 +82,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
          if (login == null || passcode == null || version == null || host == null) {
             // Construct Error Headers
             String errorHeaderBlock = "message:Missing required headers\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
 
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
@@ -92,7 +91,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
                                 "Missing required headers in CONNECT frame" + 
                                 "\u0000";
 
-           sendErrorFrame(errorFrame);
+            sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
             return;
         }
@@ -104,9 +103,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             String errorHeaders = "message:User already logged in\n";
     
             // CORRECTION: Check if the client asked for a receipt
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaders += "receipt-id:" + receiptId + "\n";
-            }
 
             // 2. Construct the Frame
             String errorBody = "User already logged in";
@@ -134,9 +132,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         } 
         else {
             String errorHeaderBlock = "message:Wrong password\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
 
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
@@ -163,7 +160,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
         String receiptId = getHeaderValue(message, "receipt");
 
-       if(receiptId==null){
+       if (receiptId == null) {
             String errorHeaderBlock = "message:Missing required headers\n";
 
             String errorFrame = "ERROR\n" +
@@ -176,6 +173,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             connections.disconnect(connectionId);
             return;
         }
+
         if (receiptId != null) {
             String receiptFrame = "RECEIPT\n" +
                                 "receipt-id:" + receiptId + "\n" +
@@ -183,6 +181,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
                                 "\u0000"; 
             connections.send(connectionId, receiptFrame);
         }
+
         connections.disconnect(connectionId);
         shouldTerminate = true; 
     }
@@ -255,11 +254,10 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         String receiptId= getHeaderValue(message, "receipt");
         String subscriptionId= getHeaderValue(message, "id");
 
-        if(destination==null || subscriptionId==null){
+        if (destination == null || subscriptionId == null){
             String errorHeaderBlock = "message:Missing required headers\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
 
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
@@ -273,15 +271,13 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         }
 
         int receiptIdNum, subIdNum;
-        try{
+        try {
             receiptIdNum=Integer.parseInt(receiptId);
             subIdNum=Integer.parseInt(subscriptionId);
-        }
-        catch (NumberFormatException e){
+        } catch (NumberFormatException e){
             String errorHeaderBlock = "message:Invalid header format\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
 
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
@@ -293,11 +289,11 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             connections.disconnect(connectionId);
             return;
         }
-        if(!isUserConnectedById(connectionId)){
+
+        if (!isUserConnectedById(connectionId)) {
             String errorHeaderBlock = "message:User not connected\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
 
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
@@ -309,26 +305,26 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             connections.disconnect(connectionId);
             return;
         }
+
         connections.subscribe(destination,connectionId,subIdNum);
-        if(receiptId!=null){
+        if (receiptId != null) {
             String receiptFrame = "RECEIPT\n" +
                                 "receipt-id:" + receiptId + "\n" +
                                 "\n" + 
                                 "\u0000"; 
             connections.send(connectionId, receiptFrame);
         }
-
-
     }
+
     private void handleUnsubscribe(String message){
         String subscriptionId= getHeaderValue(message, "id");
         String receiptId= getHeaderValue(message, "receipt");
 
-        if(!isUserConnectedById(connectionId)){
+        if (!isUserConnectedById(connectionId)) {
             String errorHeaderBlock = "message:User not connected\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
+            
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
                                 "\n" +
@@ -339,12 +335,11 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             return;
         }
 
-        if(subscriptionId==null){
+        if (subscriptionId == null) {
             String errorHeaderBlock = "message:Missing required headers\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
-
+            
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
                                 "\n" +
@@ -355,15 +350,14 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             connections.disconnect(connectionId);
             return;
         }
+
         int subIdNum;
-        try{
-            subIdNum=Integer.parseInt(subscriptionId);
-        }
-        catch (NumberFormatException e){
+        try {
+            subIdNum = Integer.parseInt(subscriptionId);
+        } catch (NumberFormatException e){
             String errorHeaderBlock = "message:Invalid header format\n";
-            if (receiptId != null) {
+            if (receiptId != null) 
                 errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            }
 
             String errorFrame = "ERROR\n" +
                                 errorHeaderBlock +
@@ -382,15 +376,15 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         // so he cannot give us something he isnt subscribed to
 
         connections.unsubscribe(subIdNum);
-        if(receiptId!=null){
+        if (receiptId != null) { 
             String receiptFrame = "RECEIPT\n" +
                                 "receipt-id:" + receiptId + "\n" +
                                 "\n" + 
                                 "\u0000"; 
             connections.send(connectionId, receiptFrame);
         }
-        
     }
+
     private void sendErrorFrame(String errorFrame){
            connections.send(this.connectionId, errorFrame);
     }
@@ -432,9 +426,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         String headerBlock = "message:" + messageHeader + "\n";
         
         // Include receipt-id in the error if the user asked for one
-        if (receiptId != null) {
+        if (receiptId != null)
             headerBlock += "receipt-id:" + receiptId + "\n";
-        }
 
         return "ERROR\n" +
             headerBlock +
@@ -442,5 +435,5 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             body + 
             "\u0000";
     }
-
+    
 }
