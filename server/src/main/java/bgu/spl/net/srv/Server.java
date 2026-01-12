@@ -26,7 +26,7 @@ public interface Server<T> extends Closeable {
             int port,
             Supplier<StompMessagingProtocol<T> > protocolFactory,
             Supplier<MessageEncoderDecoder<T> > encoderDecoderFactory,
-            ConnectionsImpl<T> activeConnections) {
+            Connections<T> activeConnections) {
 
         return new BaseServer<T>(port, protocolFactory, encoderDecoderFactory) {
             @Override

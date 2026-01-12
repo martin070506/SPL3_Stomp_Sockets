@@ -7,15 +7,15 @@ import bgu.spl.net.api.MessageEncoderDecoder;
 
 public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
 
-    private byte[] bytesData=new byte[1<<10];
+    private byte[] bytesData = new byte[1<<10];
     int len = 0;
-    public String decodeNextByte(byte nextByte){
-        if(nextByte== '\u0000'){ 
-            addByte(nextByte);
-            return DecodeMessage(bytesData); // if actual message we return it
-        }
-        return null; //still no full message
 
+    public String decodeNextByte(byte nextByte){
+        addByte(nextByte);
+        if (nextByte == '\u0000')
+            return DecodeMessage(bytesData); // if actual message we return it
+
+        return null; //still no full message
     }
 
     /**
@@ -26,7 +26,7 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
      */
     @Override
     public byte[] encode(String message) {
-        return (message + '\u0000').getBytes(); //uses utf8 by default
+        return (message).getBytes(); //uses utf8 by default
     }
     
     private String DecodeMessage(byte[] bytes){

@@ -12,21 +12,27 @@ public class EchoClient {
     public static void main(String[] args) throws IOException {
 
         if (args.length == 0) {
-            args = new String[]{"localhost", "hello"};
+            args = new String[]{"localhost", "CONNECT\n" +
+                      "accept-version:1.2\n" +
+                      "host:stomp.cs.bgu.ac.il\n" +
+                      "login:guest\n" +
+                      "passcode:guest\n" +
+                      "receipt:77\n" + // Requesting a receipt with ID 77
+                      "\n" };       // The NULL byte (End of Frame)};
         }
 
-        if (args.length < 2) {
-            System.out.println("you must supply two arguments: host, message");
-            System.exit(1);
-        }
+        // if (args.length < 2) {
+        //     System.out.println("you must supply two arguments: host, message");
+        //     System.exit(1);
+        // }
 
         //BufferedReader and BufferedWriter automatically using UTF-8 encoding
-        try (Socket sock = new Socket(args[0], 7777);
+        try (Socket sock = new Socket("127.0.0.1", 7777);
                 BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()))) {
 
             System.out.println("sending message to server");
-            out.write(args[1]);
+            out.write(args[1]+'\u0000');
             out.newLine();
             out.flush();
 

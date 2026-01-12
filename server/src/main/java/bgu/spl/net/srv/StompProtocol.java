@@ -43,11 +43,11 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
                 break;
             default:
                 System.out.println("ERROR");
-                sendErrorFrame("Some Error Message In Initial Connection"); //TODO refactor to send actual error messages
+                sendErrorFrame("Some Error Message In Initial Connection\n"); //TODO refactor to send actual error messages
                 break;
         }
-
     }
+    
     public boolean shouldTerminate(){
         return shouldTerminate;
     }
