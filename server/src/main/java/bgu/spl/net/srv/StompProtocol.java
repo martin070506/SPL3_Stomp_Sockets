@@ -270,10 +270,11 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             return;
         }
 
-        int receiptIdNum, subIdNum;
+        int receiptIdNum;
+        String subId;
         try {
             receiptIdNum=Integer.parseInt(receiptId);
-            subIdNum=Integer.parseInt(subscriptionId);
+            subId=subscriptionId;
         } catch (NumberFormatException e){
             String errorHeaderBlock = "message:Invalid header format\n";
             if (receiptId != null) 
@@ -306,7 +307,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             return;
         }
 
-        connections.subscribe(destination,connectionId,subIdNum);
+        connections.subscribe(destination,connectionId,subId);
         if (receiptId != null) {
             String receiptFrame = "RECEIPT\n" +
                                 "receipt-id:" + receiptId + "\n" +

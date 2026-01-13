@@ -17,7 +17,7 @@ public interface Connections<T> {
 
     boolean isSubscribed(String channel, int connectionId);
 
-    void subscribe(String channel,int connectionId , int subscriptionId);
+    void subscribe(String channel,int connectionId , String subscriptionId);
 
     void unsubscribe(int subscriptionId);
 
