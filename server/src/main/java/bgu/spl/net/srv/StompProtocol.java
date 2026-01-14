@@ -72,6 +72,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
     */
     private void handleConnectFrame(String message) {
         // Implement CONNECT frame handling
+        System.out.println("------------------------ GOT HERE SUCCESS!!!! -------------------------");
         String login = getHeaderValue(message, "login");
         String receiptId = getHeaderValue(message, "receipt");
         String passcode = getHeaderValue(message, "passcode");

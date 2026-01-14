@@ -22,9 +22,7 @@ StompProtocol::~StompProtocol() {
     delete connection;
 }
 
-ConnectionHandler* StompProtocol::getConnection() {
-    return connection;
-}
+
 
 // The Listener Thread calls this
 void StompProtocol::waitForConnection() {
@@ -66,7 +64,7 @@ void StompProtocol::waitForConnection() {
         // 1. Initialize the internal connection member
         if (connection) delete connection; // Safety clean up if retrying
         connection = new ConnectionHandler(host, port);
-
+        std::cout << "GOT HERE---> host:" + host + " port:" << port  << std::endl;
         if (!connection->connect()) {
             std::cerr << "Error: Could not connect to server " << host << ":" << port << std::endl;
             // Clean up immediately on failure so we can try again
@@ -198,9 +196,7 @@ void StompProtocol::setConnected(bool status) {
     isConnected = status;
 }
 
-bool StompProtocol::isSubscribedTo(const std::string& channel){
-    return channelToSubId.count(channel)>0;
-}
+
 
 bool StompProtocol::getIsError() {
     return isError;

@@ -1,4 +1,4 @@
-#include "../include/event.h"
+#include "../include/event.h" // Check capitalization (Event.h vs event.h)
 #include "../include/json.hpp"
 #include <iostream>
 #include <fstream>
@@ -6,8 +6,10 @@
 #include <map>
 #include <vector>
 #include <sstream>
+
 using json = nlohmann::json;
 
+// 1. Main Constructor
 Event::Event(std::string team_a_name, std::string team_b_name, std::string name, int time,
              std::map<std::string, std::string> game_updates, std::map<std::string, std::string> team_a_updates,
              std::map<std::string, std::string> team_b_updates, std::string discription) : 
@@ -20,6 +22,11 @@ Event::Event(std::string team_a_name, std::string team_b_name, std::string name,
     team_b_updates(team_b_updates),
     description(discription) {}
 
+// 2. Destructor (Was missing!)
+Event::~Event() {
+}
+
+// 3. String Parser Constructor
 Event::Event(const std::string &frame_body) : 
     team_a_name(""),
     team_b_name(""),
@@ -29,7 +36,7 @@ Event::Event(const std::string &frame_body) :
     team_a_updates(),
     team_b_updates(),
     description("") 
-    {
+{
     std::stringstream ss(frame_body);
     std::string line;
     std::string current_section = ""; 
@@ -41,15 +48,17 @@ Event::Event(const std::string &frame_body) :
         
         if (line.find("team b:") == 0 && current_section == "") {
             team_b_name = line.substr(7);
+        } // FIXED: Added missing closing brace here!
         
         if (line.find("event name:") == 0 && current_section == "") 
             name = line.substr(11);
         
-        if (line.find("time:") == 0 && current_section == "") 
+        if (line.find("time:") == 0 && current_section == "") {
             try {
                 time = std::stoi(line.substr(5));
             } catch (...) { time = 0; }
-        
+        }
+
         if (line == "general game updates:") 
             current_section = "general";
         
@@ -62,11 +71,10 @@ Event::Event(const std::string &frame_body) :
         if (line == "description:") 
             current_section = "description";
         
-        if (!line.empty()) 
-            if (current_section == "description") 
+        if (!line.empty()) {
+            if (current_section == "description") {
                 description += line + "\n";
-            else {
-                // זה כנראה עדכון למפה (Key:Value)
+            } else {
                 size_t colonPos = line.find(':');
                 if (colonPos != std::string::npos) {
                     std::string key = line.substr(0, colonPos);
@@ -74,63 +82,28 @@ Event::Event(const std::string &frame_body) :
                     
                     if (current_section == "general") 
                         game_updates[key] = value;
-                    if (current_section == "team_a") 
+                    else if (current_section == "team_a") 
                         team_a_updates[key] = value;
-                    if (current_section == "team_b") 
+                    else if (current_section == "team_b") 
                         team_b_updates[key] = value;
                 }
             }
+        }
     }
 }
 
-Event::~Event()
-{
-}
+// Getters
+const std::string& Event::get_team_a_name() const { return this->team_a_name; }
+const std::string &Event::get_team_b_name() const { return this->team_b_name; }
+const std::string &Event::get_name() const { return this->name; }
+int Event::get_time() const { return this->time; }
+const std::map<std::string, std::string> &Event::get_game_updates() const { return this->game_updates; }
+const std::map<std::string, std::string> &Event::get_team_a_updates() const { return this->team_a_updates; }
+const std::map<std::string, std::string> &Event::get_team_b_updates() const { return this->team_b_updates; }
+const std::string &Event::get_discription() const { return this->description; }
 
-const std::string &Event::get_team_a_name() const
-{
-    return this->team_a_name;
-}
 
-const std::string &Event::get_team_b_name() const
-{
-    return this->team_b_name;
-}
-
-const std::string &Event::get_name() const
-{
-    return this->name;
-}
-
-int Event::get_time() const
-{
-    return this->time;
-}
-
-const std::map<std::string, std::string> &Event::get_game_updates() const
-{
-    return this->game_updates;
-}
-
-const std::map<std::string, std::string> &Event::get_team_a_updates() const
-{
-    return this->team_a_updates;
-}
-
-const std::map<std::string, std::string> &Event::get_team_b_updates() const
-{
-    return this->team_b_updates;
-}
-
-const std::string &Event::get_discription() const
-{
-    return this->description;
-}
-
-Event::Event(const std::string &frame_body) : team_a_name(""), team_b_name(""), name(""), time(0), game_updates(), team_a_updates(), team_b_updates(), description("")
-{
-}
-
+// JSON Parser
 names_and_events parseEventsFile(std::string json_path)
 {
     std::ifstream f(json_path);
@@ -139,7 +112,6 @@ names_and_events parseEventsFile(std::string json_path)
     std::string team_a_name = data["team a"];
     std::string team_b_name = data["team b"];
 
-    // run over all the events and convert them to Event objects
     std::vector<Event> events;
     for (auto &event : data["events"])
     {
@@ -149,6 +121,7 @@ names_and_events parseEventsFile(std::string json_path)
         std::map<std::string, std::string> game_updates;
         std::map<std::string, std::string> team_a_updates;
         std::map<std::string, std::string> team_b_updates;
+
         for (auto &update : event["general game updates"].items())
         {
             if (update.value().is_string())
@@ -173,6 +146,7 @@ names_and_events parseEventsFile(std::string json_path)
                 team_b_updates[update.key()] = update.value().dump();
         }
         
+        // This now matches the corrected Header order
         events.push_back(Event(team_a_name, team_b_name, name, time, game_updates, team_a_updates, team_b_updates, description));
     }
     names_and_events events_and_names{team_a_name, team_b_name, events};
