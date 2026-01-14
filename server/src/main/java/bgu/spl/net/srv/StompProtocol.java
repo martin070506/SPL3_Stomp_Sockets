@@ -96,8 +96,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
             return;
         }
 
-       // Check if user is already logged in
-       // we dont need to check by id , because that specific problem is solved Client side by not allowing multiple connections with same client
+        // Check if user is already logged in
+        // we dont need to check by id , because that specific problem is solved Client side by not allowing multiple connections with same client
         if (isUserConnectedByUserName(login)) {
             // 1. Prepare the Headers
             String errorHeaders = "message:User already logged in\n";
@@ -116,6 +116,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             
             return;
         }
@@ -143,6 +144,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
         }
     }
 
@@ -171,6 +173,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            //shouldTerminate = true;
             return;
         }
 
@@ -183,7 +186,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         }
 
         connections.disconnect(connectionId);
-        shouldTerminate = true; 
+        //shouldTerminate = true; 
+        // we don change it here because we want the client to disconnect only after receiving the receipt frame / error frame
     }
 
     private void handleSendFrame(String message) {
@@ -267,14 +271,15 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             return;
         }
 
         int receiptIdNum;
-        String subId;
+        int subId;
         try {
             receiptIdNum=Integer.parseInt(receiptId);
-            subId=subscriptionId;
+            subId=Integer.parseInt(subscriptionId);
         } catch (NumberFormatException e){
             String errorHeaderBlock = "message:Invalid header format\n";
             if (receiptId != null) 
@@ -288,6 +293,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             return;
         }
 
@@ -304,6 +310,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             return;
         }
 
@@ -333,6 +340,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
                                 "\u0000";
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             return;
         }
 
@@ -349,6 +357,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             return;
         }
 
@@ -368,6 +377,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate=true;
             return;
         }
 

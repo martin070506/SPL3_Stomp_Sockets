@@ -1,114 +1,63 @@
 #include <iostream>
-#include <string>
-#include <sstream>
 #include <thread>
-#include "../include/ConnectionHandler.h"
 #include "../include/StompProtocol.h"
+#include "../include/ProcessorInput.h"
+#include "../include/ProcessorOutput.h"
 
 int main(int argc, char *argv[]) {
     
-    ConnectionHandler* connection = nullptr;
-    StompProtocol protocol=StompProtocol(*connection); // Assuming your protocol class doesn't need constructor args
-    bool isLoggedIn = false;
+    // 1. Initialize Protocol
+    StompProtocol protocol;
 
-    // --- PHASE 1: LOGIN LOOP ---
-    while (!isLoggedIn) {
-        const short bufsize = 1024;
-        char buf[bufsize];
+    while (!protocol.getIsError()) {
+        protocol.setIsError(true);
         
-        std::cout << "Please login (login host:port username password):" << std::endl;
-        std::cin.getline(buf, bufsize);
-        std::string line(buf);
-        
-        // 1. Check if command is login
-        std::stringstream ss(line);
-        std::string command;
-        ss >> command;
-        
-        if (command != "login") {
-            std::cout << "You must log in first." << std::endl;
-            continue;
-        }
+        // 2. Phase 1: Login
+        // Protocol handles the loop and stores the connection internally.
+        protocol.waitForConnection();
 
-        // 2. Parse Host and Port manually (needed to create the socket)
-        std::string hostPort;
-        ss >> hostPort;
-        size_t colonPos = hostPort.find(':');
-        if (colonPos == std::string::npos) {
-            std::cout << "Invalid host:port format" << std::endl;
-            continue;
-        }
-        std::string host = hostPort.substr(0, colonPos);
-        short port = (short) std::stoi(hostPort.substr(colonPos + 1));
+        // Check if we actually connected or if the user quit (Ctrl+D)
+        if (protocol.getConnection() == nullptr) 
+            return 0;
 
-        // 3. Create Connection and Connect
-        connection = new ConnectionHandler(host, port);
-        if (!connection->connect()) {
-            std::cerr << "Could not connect to server " << host << ":" << port << std::endl;
-            delete connection;
-            connection = nullptr;
-            continue;
-        }
+        // ==========================================================
+        // PHASE 2: GAME LOOP
+        // ==========================================================
 
-        // 4. Send the CONNECT frame
-        // protocol.processInput() generates the frame and calls connection->sendLine(...)
-        protocol.processInput(line); 
+        // 1. Create Processors
+        // We get the connection from the protocol to pass it to processors
+        // (Assuming Processors accept ConnectionHandler& in constructor)
+        ProcessorInput input(protocol, *protocol.getConnection());
+        ProcessorOutput output(protocol, *protocol.getConnection());
 
-        // 5. BLOCKING WAIT for the "CONNECTED" frame
-        // We must read the WHOLE frame (until \0) to clear the socket.
-        std::string responseFrame;
-        
-        // Using the function you showed earlier to read until \0
-        if (connection->getFrameAscii(responseFrame, '\0')) {
+        // 2. Start Listener Thread
+        std::thread listenerThread(&ProcessorOutput::run, &output);
+
+        // 3. Start Keyboard Loop
+        while (!protocol.getShouldTerminate()) {
+            const short bufsize = 1024;
+            char buf[bufsize];
             
-            // Check if the server said "CONNECTED"
-            if (responseFrame.find("CONNECTED") != std::string::npos) {
-                std::cout << "Login successful. Connected to server." << std::endl;
-                isLoggedIn = true; 
-            } else {
-                std::cout << "Login failed. Server response:\n" << responseFrame << std::endl;
-                std::cout << "Disconnecting..." << std::endl;
-                connection->close();
-                delete connection;
-                connection = nullptr;
-            }
-        } else {
-            std::cout << "Failed to receive handshake from server." << std::endl;
-            connection->close();
-            delete connection;
-            connection = nullptr;
+            std::cin.getline(buf, bufsize);
+            std::string line(buf);
+
+            if (line.empty()) continue;
+
+            input.process(line);
         }
-    }
 
-    // --- PHASE 2: GAME LOOP ---
-    
-    // 1. Start the Listener Thread
-    // This thread will read all FUTURE messages (Receipts, Messages, Errors)
-    // std::thread socketListener(readFromSocketTask, connection, &protocol);
+        // ==========================================================
+        // PHASE 3: CLEANUP
+        // ==========================================================
+        // StompProtocol destructor will handle deleting the connection.
+        // We just need to make sure the thread joins.
+        
+        // Force close to wake up the listener thread if it's stuck in read()
+        if (protocol.getConnection())
+            protocol.getConnection()->close();
 
-    // 2. Run the Keyboard Loop (Main Thread)
-    while (true) {
-        const short bufsize = 1024;
-        char buf[bufsize];
-        std::cin.getline(buf, bufsize);
-        std::string line(buf);
-
-        // Parse user input and send frames
-        protocol.processInput(line, *connection);
-
-        if (line == "logout") {
-            // Note: The actual disconnection logic usually happens 
-            // after receiving the RECEIPT for the DISCONNECT frame.
-            // You might want a flag here to wait for that before breaking.
-            break; 
-        }
-    }
-    
-    // socketListener.join(); // Wait for thread to finish if needed
-    
-    if (connection) {
-        connection->close();
-        delete connection;
+        if (listenerThread.joinable()) 
+            listenerThread.join();
     }
 
     return 0;

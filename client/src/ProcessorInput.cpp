@@ -1,97 +1,151 @@
 #include "../include/ProcessorInput.h"
-#include <sstream> 
-#include <string>
-#include <vector>
+#include "../include/StompProtocol.h"
+#include "../include/ConnectionHandler.h"
 #include <iostream>
+#include <sstream>
 
-// Constructor
-ProcessorInput::ProcessorInput() {
-    // EMPTY
-}
 
-std::string ProcessorInput::ParseValueFromRequest(std::string& clientRequest, std::string& value){
-    // Implementation here
-    return ""; 
-}
+ProcessorInput::ProcessorInput(StompProtocol& protocol,ConnectionHandler& connection): 
+protocol(protocol), connection(connection){}
 
-std::string ProcessorInput::ProcessConnectRequest(std::string& clientRequest){
-    std::stringstream ss(clientRequest);
-    std::string command,serverAddress,host,port,login,passcode,check;
-    
-    ss >> command >> serverAddress >> login >> passcode;
-    std::stringstream ss(serverAddress);
-    std::getline(ss, host, ':');
-    std::getline(ss, port);
-
-}
-
-std::string ProcessorInput::ProcessSubscribeRequest(std::string& clientRequest){
-    // Implementation
-}
-
-std::string ProcessorInput::ProcessUnsubscribeRequest(std::string& clientRequest){
-    // Implementation
-}
-
-std::string ProcessorInput::ProcessSendRequest(std::string& clientRequest){
-    // Implementation
-}
-
-std::string ProcessorInput::ProcessSummarizeRequest(std::string& clientRequest){
-    // Implementation
-}
-
-std::string ProcessorInput::ProcessRequest(std::string &clientRequest){
-    std::stringstream ss(clientRequest);
+void ProcessorInput::process(const std::string& input) {
+    std::stringstream ss(input);
     std::string command;
     ss >> command;
-    if(command == "login")
-        ProcessConnectRequest(clientRequest);
-}
-
-bool isValidLoginCommand(const std::string& line) {
-    std::stringstream ss(line);
-    std::string segment;
+    
     std::vector<std::string> args;
+    std::string arg;
+    while(ss >> arg) args.push_back(arg);
 
-    // 1. Split by Space
-    while(ss >> segment) {
-        args.push_back(segment);
+    if (command == "join") {
+        handleJoin(args);
+    } else if(command == "exit") {
+        handleExit(args);
     }
-
-    // CHECK 1: Must have exactly 4 parts (login, host:port, user, pass)
-    if (args.size() != 4) {
-        std::cout << "Error: Invalid number of arguments." << std::endl;
-        return false;
+    else if(command == "logout") {
+        handleLogout(args);
     }
-
-    // CHECK 2: First word must be "login"
-    if (args[0] != "login") {
-        std::cout << "Error: Command must start with 'login'." << std::endl;
-        return false;
-    }
-
-    // CHECK 3: Second part must look like "host:port"
-    std::string hostPort = args[1];
-    std::size_t colonPos = hostPort.find(':');
-
-    if (colonPos == std::string::npos) {
-        std::cout << "Error: Host must be in format 'ip:port'." << std::endl;
-        return false;
-    }
-
-    // CHECK 4: Verify the port is actually a number
-    std::string portStr = hostPort.substr(colonPos + 1);
-    try {
-        int port = std::stoi(portStr);
-        if (port <= 0 || port > 65535) {
-             std::cout << "Error: Port number out of range." << std::endl;
-             return false;
-        }
-    } catch (...) {
-        std::cout << "Error: Port is not a valid number." << std::endl;
-        return false;
-    }
-
-    return true;
+    // ... other commands ...
 }
+
+void ProcessorInput::handleJoin(const std::vector<std::string>& args) {
+    if(!isValidJoinCommand(args)) {
+        std::cout << "Invalid join command. Usage: join {game_name}" << std::endl;
+        return;
+    }
+    std::string gameName = args[0];
+    
+    // 1. UPDATE PROTOCOL STATE
+    int subId = protocol.generateSubId();
+    protocol.addSubscription(gameName, subId);
+    
+    
+   // 1. Build the frame content (Headers + Body)
+    std::string receiptId = std::to_string(protocol.generateReceiptId());
+    std::string frame = "SUBSCRIBE\n";
+    frame += "destination:/" + gameName + "\n";
+    frame += "id:" + std::to_string(subId) + "\n";
+    frame += "receipt:" + receiptId + "\n";
+    frame += "\n"; // The empty line indicating end of headers
+
+    // 2. SEND FRAME
+    // We use sendBytes because we need to send the Null Byte manually
+    // and we don't want sendLine adding extra newlines.
+
+    bool success = true;
+
+    // A. Send the string content
+    if (!connection.sendBytes(frame.c_str(), frame.length())) {
+        success = false;
+    }
+
+    // B. Send the null character explicitly
+    if (success && !connection.sendBytes("\0", 1)) {
+        success = false;
+    }
+
+    if (!success) {
+        std::cout << "Disconnected. Could not send frame." << std::endl;
+        protocol.setShouldTerminate(true);
+    }
+    if(!protocol.getShouldTerminate()){
+        protocol.addReceiptAction(std::stoi(receiptId), "SUBSCRIBE" + gameName);
+        protocol.addSubscription(gameName,subId);
+    }
+        
+}
+bool ProcessorInput::isValidJoinCommand(const std::vector<std::string>& args) {
+    // A valid join command has exactly one argument: the game name
+    return args.size() == 1 ;
+}
+
+void ProcessorInput::handleExit(const std::vector<std::string>& args){
+    if(!isValidExitCommand(args)){
+        std::cout << "Invalid exit command. Usage: exit {game_name}" << std::endl;
+        return;
+    }
+    int subId=protocol.getSubscriptionId(args[0]);
+    std::string receiptId = std::to_string(protocol.generateReceiptId());
+    std::string frame="UNSUBSCRIBE\n";
+    frame+="id:"+subId+'\n';
+    frame+="receipt:"+receiptId+'\n'+'\n';
+    
+    bool success=true;
+    // A. Send the string content
+    if (!connection.sendBytes(frame.c_str(), frame.length())) {
+        success = false;
+    }
+
+    // B. Send the null character explicitly
+    if (success && !connection.sendBytes("\0", 1)) {
+        success = false;
+    }
+
+    if (!success) {
+        std::cout << "Disconnected. Could not send frame." << std::endl;
+        protocol.setShouldTerminate(true);
+    }
+    if(!protocol.getShouldTerminate()){
+        protocol.addReceiptAction(std::stoi(receiptId), "UNSUBSCRIBE" + args[0]);
+        protocol.removeSubscription(args[0]);
+    }
+}
+bool ProcessorInput::isValidExitCommand(const std::vector<std::string>& args){
+    return args.size() == 1 && !protocol.isSubscribedTo(args[0]);
+}
+
+void ProcessorInput::handleLogout(const std::vector<std::string>& args){
+    if(!isValidLogoutCommand(args)){
+        std::cout << "Invalid logout command. Usage: logout " << std::endl;
+        return;
+    }
+    std::string receiptId = std::to_string(protocol.generateReceiptId());
+    std::string frame="DISCONNECT\n";
+    frame+="receipt:"+receiptId+'\n'+'\n';
+    
+    bool success=true;
+    // A. Send the string content
+    if (!connection.sendBytes(frame.c_str(), frame.length())) {
+        success = false;
+    }
+
+    // B. Send the null character explicitly
+    if (success && !connection.sendBytes("\0", 1)) {
+        success = false;
+    }
+
+    if (!success) {
+        std::cout << "Disconnected. Could not send frame." << std::endl;
+        protocol.setShouldTerminate(true);
+    }
+    if(!protocol.getShouldTerminate()){
+        protocol.addReceiptAction(std::stoi(receiptId), "DISCONNECT");
+    }
+}
+
+bool ProcessorInput::isValidLogoutCommand(const std::vector<std::string>& args){
+    return args.size()==0;
+}
+
+
+

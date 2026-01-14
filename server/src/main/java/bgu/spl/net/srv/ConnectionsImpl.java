@@ -8,9 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConnectionsImpl<T> implements Connections<String> {
 
     private ConcurrentHashMap<Integer, ConnectionHandler<String>> activeConnections;
-    private ConcurrentHashMap<String, ConcurrentHashMap<Integer, String>> channelSubscribersConnectionId; // channel -> (connectionId -> subscriptionId)
-    private ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> channelSubscribersSubscriptionId; // channel -> (subscriptionId -> connectionId)
-    private ConcurrentHashMap<String, SubscriptionPair> subscriptionIdToPair; // subscriptionId -> (channel, connectionId)
+    private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribersConnectionId; // channel -> (connectionId -> subscriptionId)
+    private ConcurrentHashMap<Integer, SubscriptionPair> subscriptionIdToPair; // subscriptionId -> (channel, connectionId)
     private ConcurrentHashMap<Integer,String> loggedInUsers;
     private int connectionIdCounter;
 
@@ -18,7 +17,6 @@ public class ConnectionsImpl<T> implements Connections<String> {
     public ConnectionsImpl() {
         this.activeConnections = new ConcurrentHashMap<>();
         this.channelSubscribersConnectionId = new ConcurrentHashMap<>();
-        this.channelSubscribersSubscriptionId = new ConcurrentHashMap<>();
         this.subscriptionIdToPair = new ConcurrentHashMap<>();
         this.loggedInUsers = new ConcurrentHashMap<>();
         this.connectionIdCounter = 0;
@@ -40,13 +38,13 @@ public class ConnectionsImpl<T> implements Connections<String> {
 
     @Override
     public void send(String channel, String msg) {
-        ConcurrentHashMap<Integer, String> subscribers = channelSubscribersConnectionId.get(channel);
+        ConcurrentHashMap<Integer, Integer> subscribers = channelSubscribersConnectionId.get(channel);
 
         if (subscribers != null) {
             String messageId = Integer.toString(java.util.UUID.randomUUID().hashCode());
             for (Integer connectionId : subscribers.keySet()) {
                 
-                String subscriptionId = subscribers.get(connectionId);
+                int subscriptionId = subscribers.get(connectionId);
 
                 String frame = "MESSAGE\n" +
                             "subscription:" + subscriptionId + "\n" +
@@ -68,8 +66,7 @@ public class ConnectionsImpl<T> implements Connections<String> {
         loggedInUsers.remove(connectionId);
         for (String channel : channelSubscribersConnectionId.keySet()) 
             if (channelSubscribersConnectionId.get(channel).containsKey(connectionId)){
-                String subscriptionId = channelSubscribersConnectionId.get(channel).remove(connectionId);
-                channelSubscribersSubscriptionId.get(channel).remove(subscriptionId);
+                int subscriptionId = channelSubscribersConnectionId.get(channel).remove(connectionId);
                 subscriptionIdToPair.remove(subscriptionId);
             }
     }
@@ -92,17 +89,15 @@ public class ConnectionsImpl<T> implements Connections<String> {
     }
 
 
-    public void subscribe(String channel, int connectionId,String subscriptionId) {
+    public void subscribe(String channel, int connectionId,int subscriptionId) {
 
         if (!channelSubscribersConnectionId.containsKey(channel)) {
-            channelSubscribersConnectionId.putIfAbsent(channel, new ConcurrentHashMap<Integer, String>());
-            channelSubscribersSubscriptionId.putIfAbsent(channel, new ConcurrentHashMap<String, Integer>());
+            channelSubscribersConnectionId.putIfAbsent(channel, new ConcurrentHashMap<Integer, Integer>());
+            
         }
            
-        ConcurrentHashMap<Integer, String> subscribersByCid = channelSubscribersConnectionId.get(channel);
-        subscribersByCid.put(connectionId, subscriptionId); 
-        ConcurrentHashMap<String, Integer> subscribersBySid = channelSubscribersSubscriptionId.get(channel);
-        subscribersBySid.put(subscriptionId, connectionId);
+        channelSubscribersConnectionId.get(channel).put(connectionId, subscriptionId);
+        
 
         subscriptionIdToPair.putIfAbsent(subscriptionId, new SubscriptionPair(connectionId, channel));
 
@@ -120,7 +115,7 @@ public class ConnectionsImpl<T> implements Connections<String> {
         int connectionId = pair.getUserId();
 
         channelSubscribersConnectionId.get(channel).remove(connectionId);
-        channelSubscribersSubscriptionId.get(channel).remove(subscriptionId);
+        
 
         subscriptionIdToPair.remove(subscriptionId);
     }
@@ -135,7 +130,7 @@ public class ConnectionsImpl<T> implements Connections<String> {
     }
     
     public boolean isSubscribed(String channel, int connectionId) {
-        ConcurrentHashMap<Integer, String> subs = channelSubscribersConnectionId.get(channel);
+        ConcurrentHashMap<Integer, Integer> subs = channelSubscribersConnectionId.get(channel);
         return (subs != null && subs.containsKey(connectionId));
     }
 }

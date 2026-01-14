@@ -1,81 +1,105 @@
-// #include "../include/ProccessorOutput.h"
-// #include "../include/StompProtocol.h"
-// #include "../include/event.h"
-// #include <iostream>
-// #include <sstream>
-// #include <vector>
+#include "../include/ProcessorOutput.h"
+#include "../include/event.h"
+#include <iostream>
+#include <sstream>
+#include <vector>
 
-// ProcessorOutput::ProcessorOutput(ConnectionHandler& ch, StompProtocol& protocol) 
-//     : ch(ch), protocol(protocol) {}
+ProcessorOutput::ProcessorOutput(StompProtocol& protocol,ConnectionHandler& connection)
+    : protocol(protocol),connection(connection) {}
 
-// void ProcessorOutput::run() {
-//     while (!protocol.shouldTerminate()) {
-//         std::string frame;
+void ProcessorOutput::run() {
+    ConnectionHandler* connection = protocol.getConnection();
 
-//         if (!ch.getFrameAscii(frame, '\0')) {
-//             std::cout << "Disconnected from server (Socket closed)" << std::endl;
-//             protocol.terminate();
-//             break;
-//         }
+    if (!connection) {
+        std::cerr << "Error: Listener thread started without an active connection!" << std::endl;
+        protocol.setShouldTerminate(true);
+        return;
+    }
 
-//         std::stringstream ss(frame);
-//         std::string command;
-//         std::getline(ss, command); 
+    while (!protocol.getShouldTerminate()) {
+        std::string frame;
+        if (!connection->getFrameAscii(frame, '\0')) {
+            std::cout << "Disconnected from server (Socket closed)" << std::endl;
+            protocol.setShouldTerminate(true);
+            break;
+        }
 
-//         std::string line;
-//         std::map<std::string, std::string> headers;
-//         while (std::getline(ss, line) && line != "" && line != "\r") {
-//             size_t colonPos = line.find(':');
-//             if (colonPos != std::string::npos) {
-//                 std::string key = line.substr(0, colonPos);
-//                 std::string value = line.substr(colonPos + 1);
-//                 // ניקוי תווי \r אם יש
-//                 if (!value.empty() && value.back() == '\r') value.pop_back();
-//                 headers[key] = value;
-//             }
-//         }
+        process(frame);
+    }
+}
 
-//         // קריאת הגוף (Body)
-//         std::string body;
-//         // שארית הסטרים היא הגוף
-//         char c;
-//         while(ss.get(c)) {
-//             body += c;
-//         }
-        
-//         // --- Logic Handling ---
+void ProcessorOutput::process(const std::string& frame) {
+    std::stringstream ss(frame);
+    std::string command;
+    
+    std::getline(ss, command);
 
-//         if (command == "CONNECTED") {
-//             std::cout << "Login successful" << std::endl; // [cite: 322]
-//             protocol.setConnected(true);
-//         }
-//         else if (command == "ERROR") {
-//             std::cout << "Error from server: " << std::endl;
-//             if (headers.count("message")) {
-//                 std::cout << headers["message"] << std::endl; // [cite: 125]
-//             }
-//             std::cout << body << std::endl;
-//             protocol.terminate();
-//             ch.close();
-//         }
-//         else if (command == "RECEIPT") {
-//             if (headers.count("receipt-id")) {
-//                 int receiptId = std::stoi(headers["receipt-id"]);
-//                 protocol.processReceipt(receiptId); // [cite: 104]
-//             }
-//         }
-//         else if (command == "MESSAGE") {
-//             // הודעה ממשתמש אחר על עדכון במשחק
-//             // הפרוטוקול דורש לשמור את האירוע
-//             std::string user = headers["user"]; // נניח שיש הדר כזה לפי הדוגמה ב-[cite: 384]
-//             Event event(body); // שימוש בקונסטרקטור של Event שמפרסר את הגוף
-            
-//             // הדרישה: לעדכן את המשחק ואם רוצים לעשות summary אח"כ
-//             protocol.addEvent(event, user);
-            
-//             // הדפסה חיה למסך אינה חובה לפי הדרישות היבשות ל-MESSAGE, 
-//             // אבל הגיוני להציג משהו. עם זאת, הדרישה העיקרית היא join/exit ו-summary.
-//             std::cout << "Update received for game: " << event.get_team_a_name() << " vs " << event.get_team_b_name() << std::endl;
-//         }
-//     }
-// }
+    std::string line;
+    std::map<std::string, std::string> headers;
+    
+    while (std::getline(ss, line) && line != "") {
+        size_t colonPos = line.find(':');
+        if (colonPos != std::string::npos) {
+            std::string key = line.substr(0, colonPos);
+            std::string value = line.substr(colonPos + 1);
+            headers[key] = value;
+        }
+    }
+
+    std::string body;
+    char c;
+    while (ss.get(c)) 
+        body += c;
+    
+    if (command == "CONNECTED") 
+        handleConnected(headers);
+    if (command == "MESSAGE") 
+        handleMessage(headers, body);
+    if (command == "RECEIPT") 
+        handleReceipt(headers);
+    if (command == "ERROR") 
+        handleError(headers, body);
+}
+
+void ProcessorOutput::handleConnected(const std::map<std::string, std::string>& headers) {
+    std::cout << "Login successful" << std::endl;
+    protocol.setConnected(true);
+}
+
+void ProcessorOutput::handleMessage(const std::map<std::string, std::string>& headers, const std::string& body) {
+    std::string user = "";
+    if (headers.count("user")) 
+        user = headers.at("user");
+
+    Event event(body);
+
+    protocol.addEvent(event, user);
+
+    std::cout << "Game update received from " << user << ": " 
+              << event.get_name() << std::endl;
+}
+
+void ProcessorOutput::handleReceipt(const std::map<std::string, std::string>& headers) {
+
+    if (headers.count("receipt-id")) 
+        try {
+            int receiptId = std::stoi(headers.at("receipt-id"));
+            protocol.processReceipt(receiptId);
+        } catch (const std::exception& e) {
+            std::cout << "Error parsing receipt-id" << std::endl;
+        }
+
+}
+
+void ProcessorOutput::handleError(const std::map<std::string, std::string>& headers, const std::string& body) {
+    std::cout << "Error from server: " << std::endl;
+    if (headers.count("message")) 
+        std::cout << "Message: " << headers.at("message") << std::endl;
+    
+    std::cout << body << std::endl;
+    
+    protocol.setShouldTerminate(true);
+
+    if (protocol.getConnection()) 
+        protocol.getConnection()->close();
+}

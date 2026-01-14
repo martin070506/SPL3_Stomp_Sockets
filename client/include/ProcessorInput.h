@@ -1,16 +1,26 @@
-#include <iostream>
-class ProcessorInput{
-    private:
-        std::string ParseValueFromRequest(std::string &clientRequest, std::string &value);
-        std::string ProcessConnectRequest(std::string& clientRequest);
-        std::string ProcessSubscribeRequest(std::string& clientRequest);
-        std::string ProcessUnsubscribeRequest(std::string& clientRequest);
-        std::string ProcessSendRequest(std::string& clientRequest);
-        std::string ProcessSummarizeRequest(std::string &clientRequest);
-        bool isValidLoginCommand(const std::string& line);                                                
+#pragma once
+#include <string>
+#include <vector>
 
 
-    public:
-        ProcessorInput();
-        std::string ProcessRequest(std::string &clientRequest);
+// Forward declarations
+class StompProtocol;
+class ConnectionHandler;
+
+class ProcessorInput {
+public:
+    // Static method or instance method to handle logic
+    void process(const std::string& input);
+    ProcessorInput(StompProtocol& protocol,ConnectionHandler& connection);
+private:
+    StompProtocol &protocol;
+    ConnectionHandler& connection;
+    // Helper functions to keep code clean
+    void handleJoin(const std::vector<std::string>& args);
+    void handleExit(const std::vector<std::string>& args);
+    void handleReport(const std::vector<std::string>& args);
+    void handleLogout(const std::vector<std::string>& args);
+    bool isValidJoinCommand(const std::vector<std::string>& args);
+    bool isValidExitCommand(const std::vector<std::string>& args);
+    bool isValidLogoutCommand(const std::vector<std::string>& args);
 };

@@ -10,11 +10,77 @@ using json = nlohmann::json;
 
 Event::Event(std::string team_a_name, std::string team_b_name, std::string name, int time,
              std::map<std::string, std::string> game_updates, std::map<std::string, std::string> team_a_updates,
-             std::map<std::string, std::string> team_b_updates, std::string discription)
-    : team_a_name(team_a_name), team_b_name(team_b_name), name(name),
-      time(time), game_updates(game_updates), team_a_updates(team_a_updates),
-      team_b_updates(team_b_updates), description(discription)
-{
+             std::map<std::string, std::string> team_b_updates, std::string discription) : 
+    team_a_name(team_a_name),
+    team_b_name(team_b_name), 
+    name(name),
+    time(time),
+    game_updates(game_updates),
+    team_a_updates(team_a_updates),
+    team_b_updates(team_b_updates),
+    description(discription) {}
+
+Event::Event(const std::string &frame_body) : 
+    team_a_name(""),
+    team_b_name(""),
+    name(""),
+    time(0), 
+    game_updates(),
+    team_a_updates(),
+    team_b_updates(),
+    description("") 
+    {
+    std::stringstream ss(frame_body);
+    std::string line;
+    std::string current_section = ""; 
+
+    while (std::getline(ss, line)) {
+
+        if (line.find("team a:") == 0 && current_section == "") 
+            team_a_name = line.substr(7);
+        
+        if (line.find("team b:") == 0 && current_section == "") {
+            team_b_name = line.substr(7);
+        
+        if (line.find("event name:") == 0 && current_section == "") 
+            name = line.substr(11);
+        
+        if (line.find("time:") == 0 && current_section == "") 
+            try {
+                time = std::stoi(line.substr(5));
+            } catch (...) { time = 0; }
+        
+        if (line == "general game updates:") 
+            current_section = "general";
+        
+        if (line == "team a updates:") 
+            current_section = "team_a";
+        
+        if (line == "team b updates:") 
+            current_section = "team_b";
+        
+        if (line == "description:") 
+            current_section = "description";
+        
+        if (!line.empty()) 
+            if (current_section == "description") 
+                description += line + "\n";
+            else {
+                // זה כנראה עדכון למפה (Key:Value)
+                size_t colonPos = line.find(':');
+                if (colonPos != std::string::npos) {
+                    std::string key = line.substr(0, colonPos);
+                    std::string value = line.substr(colonPos + 1);
+                    
+                    if (current_section == "general") 
+                        game_updates[key] = value;
+                    if (current_section == "team_a") 
+                        team_a_updates[key] = value;
+                    if (current_section == "team_b") 
+                        team_b_updates[key] = value;
+                }
+            }
+    }
 }
 
 Event::~Event()
