@@ -78,7 +78,7 @@ public class ConnectionsImpl<T> implements Connections<String> {
         loggedInUsers.put(connectionId, userName);
        } catch (Exception e){}
 
-       return false; //just a placeholder until i know how to access the user data base
+       return true; //just a placeholder until i know how to access the user data base
     }
 
     //adds a *GENERAL* connection, as in someone is connected to the socket
@@ -91,17 +91,11 @@ public class ConnectionsImpl<T> implements Connections<String> {
 
     public void subscribe(String channel, int connectionId,int subscriptionId) {
 
-        if (!channelSubscribersConnectionId.containsKey(channel)) {
+        if (!channelSubscribersConnectionId.containsKey(channel)) 
             channelSubscribersConnectionId.putIfAbsent(channel, new ConcurrentHashMap<Integer, Integer>());
             
-        }
-           
         channelSubscribersConnectionId.get(channel).put(connectionId, subscriptionId);
-        
-
-        subscriptionIdToPair.putIfAbsent(subscriptionId, new SubscriptionPair(connectionId, channel));
-
-       
+        subscriptionIdToPair.putIfAbsent(subscriptionId, new SubscriptionPair(connectionId, channel));   
     }
 
 
@@ -115,8 +109,6 @@ public class ConnectionsImpl<T> implements Connections<String> {
         int connectionId = pair.getUserId();
 
         channelSubscribersConnectionId.get(channel).remove(connectionId);
-        
-
         subscriptionIdToPair.remove(subscriptionId);
     }
 

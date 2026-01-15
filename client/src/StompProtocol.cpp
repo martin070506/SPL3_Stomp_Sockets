@@ -19,12 +19,10 @@ StompProtocol::StompProtocol() :
 StompProtocol::~StompProtocol() {
     if (connection)
         connection->close();
+
     delete connection;
 }
 
-
-
-// The Listener Thread calls this
 void StompProtocol::waitForConnection() {
     while (!isConnected) {
         const short bufsize = 1024;
@@ -35,7 +33,6 @@ void StompProtocol::waitForConnection() {
         std::string line(buf);
         
         if (std::cin.eof()) {
-             // Handle Ctrl+D immediately so we don't loop forever
              shouldTerminate = true;
              return;
         }
@@ -61,10 +58,10 @@ void StompProtocol::waitForConnection() {
         std::string host = hostPort.substr(0, colonPos);
         short port = (short)std::stoi(hostPort.substr(colonPos + 1));
 
-        // 1. Initialize the internal connection member
-        if (connection) delete connection; // Safety clean up if retrying
+        if (connection)
+            delete connection; 
         connection = new ConnectionHandler(host, port);
-        std::cout << "GOT HERE---> host:" + host + " port:" << port  << std::endl;
+        // std::cout << "GOT HERE---> host:" + host + " port:" << port  << std::endl;
         if (!connection->connect()) {
             std::cerr << "Error: Could not connect to server " << host << ":" << port << std::endl;
             // Clean up immediately on failure so we can try again
@@ -73,7 +70,6 @@ void StompProtocol::waitForConnection() {
             continue;
         }
 
-        // 2. Send CONNECT Frame (Manual Bootstrapping)
         std::string frame = "CONNECT\n";
         frame += "accept-version:1.2\n";
         frame += "host:stomp.cs.bgu.ac.il\n";
@@ -91,7 +87,6 @@ void StompProtocol::waitForConnection() {
             continue;
         }
 
-        // 3. Wait for Receipt
         std::string answer;
         if (!connection->getFrameAscii(answer, '\0')) {
              std::cout << "Error: Server disconnected during login." << std::endl;
@@ -103,7 +98,6 @@ void StompProtocol::waitForConnection() {
         if (answer.find("CONNECTED") != std::string::npos) {
             std::cout << "Login successful." << std::endl;
             this->isConnected = true;
-            // We return void. The 'connection' member is now ready.
             return; 
         } else {
             std::cout << "Login failed. Response:\n" << answer << std::endl;
@@ -147,7 +141,7 @@ int StompProtocol::getSubscriptionId(const std::string& channel) {
     if (channelToSubId.count(channel)) 
         return channelToSubId[channel];
 
-    return -1; // לא קיים מנוי למשחק הזה
+    return -1; 
 }
 
 bool StompProtocol::isSubscribedTo(const std::string& channel) {
@@ -195,8 +189,6 @@ void StompProtocol::setConnected(bool status) {
     std::lock_guard<std::mutex> lock(mtx);
     isConnected = status;
 }
-
-
 
 bool StompProtocol::getIsError() {
     return isError;

@@ -29,6 +29,7 @@ void ProcessorOutput::run() {
 }
 
 void ProcessorOutput::process(const std::string& frame) {
+    
     std::stringstream ss(frame);
     std::string command;
     

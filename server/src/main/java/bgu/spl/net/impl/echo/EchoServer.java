@@ -31,6 +31,6 @@ public class EchoServer {
         //         () -> new EchoProtocol<>(), //protocol factory
         //         LineMessageEncoderDecoder::new //message encoder decoder factory
         // ).serve();
-        
+        // login 127.0.0.1:7777 hello world
     }
 }

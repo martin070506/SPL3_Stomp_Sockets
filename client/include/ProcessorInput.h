@@ -23,4 +23,5 @@ private:
     bool isValidJoinCommand(const std::vector<std::string>& args);
     bool isValidExitCommand(const std::vector<std::string>& args);
     bool isValidLogoutCommand(const std::vector<std::string>& args);
+    bool sendFrame(ConnectionHandler &connection, const std::string &frame);
 };
