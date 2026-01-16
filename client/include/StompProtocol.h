@@ -18,7 +18,7 @@ private:
     // --- STATE VARIABLES ---
     // Map: Channel Name -> Subscription ID (e.g., "germany_spain" -> 78)
     std::map<std::string, int> channelToSubId;
-    
+    std::string username;
     // Map: Username -> List of events (Game updates received)
     std::map<std::string, std::map<std::string, std::vector<Event>>> userToEvents;
     std::map<int,std::string> receiptActions;
@@ -26,7 +26,7 @@ private:
     // Helper counters
     int subscriptionIdCounter;
     int receiptIdCounter;
-
+   
     // State flags
     bool shouldTerminate;
     bool isConnected;
@@ -52,7 +52,7 @@ public:
     void removeSubscription(const std::string& channel); //
     int getSubscriptionId(const std::string& channel); //
     bool isSubscribedTo(const std::string& channel);
-    
+    std::map<std::string,std::vector<Event>> getUserEvents(const std::string& username);
     void addReceiptAction(int receiptId, const std::string& action); //
     int generateSubId(); //
     int generateReceiptId(); //
@@ -65,5 +65,6 @@ public:
     bool setIsError(bool val);
     
     void setConnected(bool status); //
+    std::string getUsername();
 };
 

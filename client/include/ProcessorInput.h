@@ -20,8 +20,6 @@ private:
     void handleExit(const std::vector<std::string>& args);
     void handleReport(const std::vector<std::string>& args);
     void handleLogout(const std::vector<std::string>& args);
-    bool isValidJoinCommand(const std::vector<std::string>& args);
-    bool isValidExitCommand(const std::vector<std::string>& args);
-    bool isValidLogoutCommand(const std::vector<std::string>& args);
+    void handleSummary(const std::vector<std::string>& args);
     bool sendFrame(ConnectionHandler &connection, const std::string &frame);
 };

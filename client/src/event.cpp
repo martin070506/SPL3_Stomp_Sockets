@@ -43,12 +43,17 @@ Event::Event(const std::string &frame_body) :
 
     while (std::getline(ss, line)) {
 
-        if (line.find("team a:") == 0 && current_section == "") 
-            team_a_name = line.substr(7);
+        if (line.find("team a:") == 0 && current_section == "") {
+            // Check if there is a space at index 7
+            int skip = (line.length() > 7 && line[7] == ' ') ? 8 : 7;
+            team_a_name = line.substr(skip);
+        }
         
         if (line.find("team b:") == 0 && current_section == "") {
-            team_b_name = line.substr(7);
-        } // FIXED: Added missing closing brace here!
+            // Check if there is a space at index 7
+            int skip = (line.length() > 7 && line[7] == ' ') ? 8 : 7;
+            team_b_name = line.substr(skip);
+        }
         
         if (line.find("event name:") == 0 && current_section == "") 
             name = line.substr(11);

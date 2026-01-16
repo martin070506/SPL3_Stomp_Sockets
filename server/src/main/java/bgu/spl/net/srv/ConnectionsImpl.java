@@ -91,11 +91,14 @@ public class ConnectionsImpl<T> implements Connections<String> {
 
     public void subscribe(String channel, int connectionId,int subscriptionId) {
 
-        if (!channelSubscribersConnectionId.containsKey(channel)) 
+        if (!channelSubscribersConnectionId.containsKey(channel)) {
             channelSubscribersConnectionId.putIfAbsent(channel, new ConcurrentHashMap<Integer, Integer>());
-            
+            System.out.println("Created Channel");
+        }
+        
         channelSubscribersConnectionId.get(channel).put(connectionId, subscriptionId);
         subscriptionIdToPair.putIfAbsent(subscriptionId, new SubscriptionPair(connectionId, channel));   
+        printMap(channelSubscribersConnectionId.get(channel));
     }
 
 
@@ -122,7 +125,15 @@ public class ConnectionsImpl<T> implements Connections<String> {
     }
     
     public boolean isSubscribed(String channel, int connectionId) {
+       
         ConcurrentHashMap<Integer, Integer> subs = channelSubscribersConnectionId.get(channel);
+       
         return (subs != null && subs.containsKey(connectionId));
+    }
+
+
+    public void printMap(ConcurrentHashMap<Integer,Integer> map) {
+        // Uses the built-in forEach method
+        map.forEach((k, v) -> System.out.println(k + ":" + v));
     }
 }

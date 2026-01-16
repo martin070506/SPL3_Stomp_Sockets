@@ -98,6 +98,7 @@ void StompProtocol::waitForConnection() {
         if (answer.find("CONNECTED") != std::string::npos) {
             std::cout << "Login successful." << std::endl;
             this->isConnected = true;
+            this->username=username;
             return; 
         } else {
             std::cout << "Login failed. Response:\n" << answer << std::endl;
@@ -113,6 +114,7 @@ void StompProtocol::processReceipt(int receiptId) {
     if (receiptActions.count(receiptId)) {
         std::string action = receiptActions[receiptId];
         std::cout << "Server confirmed: " << action << std::endl;
+        std::cout <<"RECEIPT\nreceipt-id:"<<std::to_string(receiptId)<<std::endl;
 
         if (action == "DISCONNECT") {
             isError = false;
@@ -154,6 +156,7 @@ void StompProtocol::addEvent(const Event& event, const std::string& username) {
     std::lock_guard<std::mutex> lock(mtx);
 
     std::string gameName = event.get_team_a_name() + "_" + event.get_team_b_name();
+    std::cout<<"added gameName: "<<gameName<<" to user: "<<username<<std::endl;
     userToEvents[username][gameName].push_back(event);
 }
 
@@ -164,7 +167,7 @@ void StompProtocol::addReceiptAction(int receiptId, const std::string& action) {
 
 int StompProtocol::generateSubId() {
     std::lock_guard<std::mutex> lock(mtx);
-    return ++subscriptionIdCounter;
+    return subscriptionIdCounter++;
 }
 
 int StompProtocol::generateReceiptId() {
@@ -189,6 +192,9 @@ void StompProtocol::setConnected(bool status) {
     std::lock_guard<std::mutex> lock(mtx);
     isConnected = status;
 }
+std::string StompProtocol::getUsername(){
+    return username;
+}
 
 bool StompProtocol::getIsError() {
     return isError;
@@ -196,4 +202,8 @@ bool StompProtocol::getIsError() {
 
 bool StompProtocol::setIsError(bool val) {
     isError = val;
+}
+
+std::map<std::string,std::vector<Event>> StompProtocol::getUserEvents(const std::string& username){
+    return userToEvents[username];
 }

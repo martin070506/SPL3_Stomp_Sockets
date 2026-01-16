@@ -41,6 +41,6 @@ int main(int argc, char *argv[]) {
         if (listenerThread.joinable()) 
             listenerThread.join();
     }
-
+    delete protocol.getConnection();
     return 0;
 }

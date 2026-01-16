@@ -19,30 +19,26 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
     }
     
     public void process(String message){
+
+        System.out.println("\nCommand Gotten:\n" + message);
         String command = message.split("\n")[0];
         switch(command) {
             case "CONNECT":
-                System.out.println("CONNECT");
                 handleConnectFrame(message);
                 break;
             case "DISCONNECT":
-                System.out.println("DISCONNECT");
                 handleDisconnectFrame(message);
                 break;
             case "SEND":
-                System.out.println("SEND");
                 handleSendFrame(message);
                 break;
             case "SUBSCRIBE":
-                System.out.println("SUBSCRIBE");
                 handleSubscribeFrame(message);
                 break;
             case "UNSUBSCRIBE":
-                System.out.println("UNSUBSCRIBE");
                 handleUnsubscribe(message);
                 break;
             default:
-                System.out.println("ERROR");
                 sendErrorFrame("Some Error Message In Initial Connection\n"); //TODO refactor to send actual error messages
                 break;
         }
@@ -258,7 +254,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         String destination= getHeaderValue(message, "destination");
         String receiptId= getHeaderValue(message, "receipt");
         String subscriptionId= getHeaderValue(message, "id");
-
+        System.out.println(destination + ":" + connections.isSubscribed(destination, connectionId));
         if (destination == null || subscriptionId == null){
             String errorHeaderBlock = "message:Missing required headers\n";
             if (receiptId != null) 
@@ -307,6 +303,22 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
                                 errorHeaderBlock +
                                 "\n" +
                                 "User not connected" + 
+                                "\u0000";
+
+            sendErrorFrame(errorFrame);
+            connections.disconnect(connectionId);
+            shouldTerminate=true;
+            return;
+        }
+        if(connections.isSubscribed(destination, connectionId)){
+            String errorHeaderBlock = "message:User already subscribed to "+ destination + "\n";
+            if (receiptId != null) 
+                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
+
+            String errorFrame = "ERROR\n" +
+                                errorHeaderBlock +
+                                "\n" +
+                                "User already subscribed" + 
                                 "\u0000";
 
             sendErrorFrame(errorFrame);

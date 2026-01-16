@@ -29,7 +29,7 @@ void ProcessorOutput::run() {
 }
 
 void ProcessorOutput::process(const std::string& frame) {
-    
+    std::cout << "Frame Gotten:\n" << frame <<std::endl;
     std::stringstream ss(frame);
     std::string command;
     
@@ -69,8 +69,17 @@ void ProcessorOutput::handleConnected(const std::map<std::string, std::string>& 
 
 void ProcessorOutput::handleMessage(const std::map<std::string, std::string>& headers, const std::string& body) {
     std::string user = "";
-    if (headers.count("user")) 
-        user = headers.at("user");
+    std::stringstream ss(body);
+    std::string line;
+    // Read the first line, which usually contains "user: name"
+    if (std::getline(ss, line)) {
+        if (line.find("user: ") == 0) {
+            user = line.substr(6); // Skip "user: " (6 chars)
+        }
+        else if (line.find("user:") == 0) {
+             user = line.substr(5); // Skip "user:" (5 chars) handle case without space
+        }
+    }
 
     Event event(body);
 
