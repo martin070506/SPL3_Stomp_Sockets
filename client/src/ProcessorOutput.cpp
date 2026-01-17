@@ -102,9 +102,9 @@ void ProcessorOutput::handleReceipt(const std::map<std::string, std::string>& he
 }
 
 void ProcessorOutput::handleError(const std::map<std::string, std::string>& headers, const std::string& body) {
-    std::cout << "Error from server: " << std::endl;
-    if (headers.count("message")) 
-        std::cout << "Message: " << headers.at("message") << std::endl;
+    // std::cout << "Error from server: " << std::endl;
+    // if (headers.count("message")) 
+    //     std::cout << "Message: " << headers.at("message") << std::endl;
     
     std::cout << body << std::endl;
     

@@ -32,6 +32,8 @@ private:
     bool isConnected;
     bool isError;
     std::mutex mtx;
+    std::mutex logoutMutex;
+    std::condition_variable logoutCV;
 
 public:
     StompProtocol();
@@ -60,10 +62,11 @@ public:
 
     bool getShouldTerminate() const; //
     void setShouldTerminate(bool val); //
-
+    void waitForLogoutReceipt();
+    void signalLogoutComplete();
     bool getIsError();
     bool setIsError(bool val);
-    
+    bool getConnected();
     void setConnected(bool status); //
     std::string getUsername();
 };

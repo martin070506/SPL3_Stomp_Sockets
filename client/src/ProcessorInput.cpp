@@ -17,7 +17,6 @@ void ProcessorInput::process(const std::string& input) {
     std::string arg;
     while (ss >> arg) 
         args.push_back(arg);
-
     if (command == "join") 
         handleJoin(args);
     else if (command == "exit") 
@@ -29,6 +28,9 @@ void ProcessorInput::process(const std::string& input) {
     }
     else if(command =="summary"){
         handleSummary(args);
+    }
+    else if(protocol.getConnected()==false){
+        std::cout << "User Must Login first" <<std::endl;
     }
     else{
         std::cout << "Invalid Command, Enter Something Valid" <<std::endl;
@@ -100,8 +102,8 @@ void ProcessorInput::handleLogout(const std::vector<std::string>& args) {
         std::cout << "Invalid logout command. Usage: logout " << std::endl;
         return;
     }
-
-    std::string receiptId = std::to_string(protocol.generateReceiptId());
+    int receiptInt=protocol.generateReceiptId();
+    std::string receiptId = std::to_string(receiptInt);
     std::string frame = "DISCONNECT\n";
     frame += "receipt:" + receiptId + "\n\n";
     
@@ -113,8 +115,12 @@ void ProcessorInput::handleLogout(const std::vector<std::string>& args) {
         std::cout << "Disconnected. Could not send frame." << std::endl;
         protocol.setShouldTerminate(true);
     }
-    if (!protocol.getShouldTerminate())
+    if (!protocol.getShouldTerminate()){
         protocol.addReceiptAction(std::stoi(receiptId), "DISCONNECT");
+        protocol.waitForLogoutReceipt();
+
+    }
+        
 }
 
 void ProcessorInput::handleReport(const std::vector<std::string>& args){

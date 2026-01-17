@@ -47,7 +47,23 @@ void StompProtocol::waitForConnection() {
         }
 
         std::string hostPort, username, password;
-        ss >> hostPort >> username >> password;
+        std::vector<std::string> args;
+        std::string arg;
+        while (ss >> arg) 
+            args.push_back(arg);
+        if(args.size()!=3){
+            std::cout << "Error: Invalid command format" << std::endl;
+            continue;
+        }
+        hostPort=args[0];
+        username=args[1];
+        password=args[2];
+        for (std::string arg : args){
+            if(arg.empty()|| arg==""){
+                std::cout << "Error: Invalid command format" << std::endl;
+                continue;
+            }
+        }
 
         size_t colonPos = hostPort.find(':');
         if (colonPos == std::string::npos) {
@@ -94,14 +110,13 @@ void StompProtocol::waitForConnection() {
              connection = nullptr;
              continue;
         }
+        std::cout <<"Frame Gotten from server:\n" <<  answer <<std::endl;
 
         if (answer.find("CONNECTED") != std::string::npos) {
-            std::cout << "Login successful." << std::endl;
             this->isConnected = true;
             this->username=username;
             return; 
         } else {
-            std::cout << "Login failed. Response:\n" << answer << std::endl;
             connection->close();
             delete connection;
             connection = nullptr;
@@ -113,8 +128,8 @@ void StompProtocol::processReceipt(int receiptId) {
     std::lock_guard<std::mutex> lock(mtx); 
     if (receiptActions.count(receiptId)) {
         std::string action = receiptActions[receiptId];
-        std::cout << "Server confirmed: " << action << std::endl;
-        std::cout <<"RECEIPT\nreceipt-id:"<<std::to_string(receiptId)<<std::endl;
+        // std::cout << "Server confirmed: " << action << std::endl;
+        // std::cout <<"RECEIPT\nreceipt-id:"<<std::to_string(receiptId)<<std::endl;
 
         if (action == "DISCONNECT") {
             isError = false;
@@ -122,6 +137,7 @@ void StompProtocol::processReceipt(int receiptId) {
             isConnected = false;
             if (connection) 
                 connection->close(); 
+            signalLogoutComplete();
         }  
         receiptActions.erase(receiptId);
     }
@@ -192,6 +208,9 @@ void StompProtocol::setConnected(bool status) {
     std::lock_guard<std::mutex> lock(mtx);
     isConnected = status;
 }
+bool StompProtocol::getConnected(){
+    return isConnected;
+}
 std::string StompProtocol::getUsername(){
     return username;
 }
@@ -207,3 +226,18 @@ bool StompProtocol::setIsError(bool val) {
 std::map<std::string,std::vector<Event>> StompProtocol::getUserEvents(const std::string& username){
     return userToEvents[username];
 }
+
+void StompProtocol::waitForLogoutReceipt(){
+    std::unique_lock<std::mutex> lock(logoutMutex);
+    logoutCV.wait(lock, [this]{ return !isConnected; });
+}
+
+void StompProtocol::signalLogoutComplete() {
+    {
+        std::lock_guard<std::mutex> lock(logoutMutex);
+        isConnected = false;
+    }
+    logoutCV.notify_all(); // Wake up!
+}
+
+
