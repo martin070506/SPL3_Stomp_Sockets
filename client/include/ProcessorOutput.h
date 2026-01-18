@@ -13,6 +13,8 @@ private:
     // הפונקציה הראשית שמפרקת את הפריים ומנתבת לפונקציות הטיפול
     void process(const std::string& frame);
 
+    std::string trim(std::string& str);
+
     // מטפלים ספציפיים לכל סוג פקודה
     void handleConnected(const std::map<std::string, std::string>& headers);
     void handleMessage(const std::map<std::string, std::string>& headers, const std::string& body);

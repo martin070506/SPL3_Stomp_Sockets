@@ -36,25 +36,32 @@ void ProcessorInput::process(const std::string& input) {
         std::cout << "Invalid Command, Enter Something Valid" <<std::endl;
     }
 }
-
 void ProcessorInput::handleJoin(const std::vector<std::string>& args) {
     if (args.size() != 1) {
         std::cout << "Invalid join command. Usage: join {game_name}" << std::endl;
         return;
     }
     std::string gameName = args[0];
+
+    if (protocol.isSubscribedTo(gameName)) {
+        std::cout << "You are already subscribed to " << gameName << std::endl;
+        return; 
+    }
     
     int subId = protocol.generateSubId();
-    
-    std::string receiptId = std::to_string(protocol.generateReceiptId());
+    int receiptIdInt = protocol.generateReceiptId(); 
+    std::string receiptId = std::to_string(receiptIdInt);
+
     std::string frame = "SUBSCRIBE\n";
     frame += "destination:/" + gameName + "\n";
     frame += "id:" + std::to_string(subId) + "\n";
     frame += "receipt:" + receiptId + "\n";
     frame += "\n";
 
-    bool success = true;
+    protocol.addReceiptAction(receiptIdInt, "join " + gameName); 
+    protocol.addSubscription(gameName, subId);
 
+    bool success = true;
     if (!sendFrame(connection, frame)) 
         success = false;
 
@@ -62,25 +69,31 @@ void ProcessorInput::handleJoin(const std::vector<std::string>& args) {
         std::cout << "Disconnected. Could not send frame." << std::endl;
         protocol.setShouldTerminate(true);
     }
+}   
 
-    if (!protocol.getShouldTerminate()) {
-        protocol.addReceiptAction(std::stoi(receiptId), "SUBSCRIBE" + gameName);
-        protocol.addSubscription(gameName,subId);
+
+void ProcessorInput::handleExit(const std::vector<std::string>& args) {
+    if (args.size() != 1) {
+        std::cout << "Invalid exit command. Usage: exit {game_name}" << std::endl;
+        return;
     }
-}        
+    
+    std::string gameName = args[0];
 
-
-void ProcessorInput::handleExit(const std::vector<std::string>& args){
-    if (args.size() != 1 || !protocol.isSubscribedTo(args[0])) {
-        std::cout << "Invalid exit command. Usage: exit {game_name} [that youre subscribed to]" << std::endl;
+    if (!protocol.isSubscribedTo(gameName)) {
+        std::cout << "User is not subscribed to channel " << gameName << std::endl;
         return;
     }
 
-    int subId = protocol.getSubscriptionId(args[0]);
-    std::cout << subId << std::endl;
-    std::string receiptId = std::to_string(protocol.generateReceiptId());
+    int subId = protocol.getSubscriptionId(gameName);
+    int receiptIdInt = protocol.generateReceiptId();
+    std::string receiptId = std::to_string(receiptIdInt);
+
+    protocol.addReceiptAction(receiptIdInt, "exit " + gameName);
+    protocol.removeSubscription(gameName);
+
     std::string frame = "UNSUBSCRIBE\n";
-    frame += "id:" + std::to_string(subId) + '\n';
+    frame += "id:" + std::to_string(subId) + "\n";
     frame += "receipt:" + receiptId + "\n\n";
     
     bool success = true;
@@ -90,10 +103,6 @@ void ProcessorInput::handleExit(const std::vector<std::string>& args){
     if (!success) {
         std::cout << "Disconnected. Could not send frame." << std::endl;
         protocol.setShouldTerminate(true);
-    }
-    if (!protocol.getShouldTerminate()) {
-        protocol.addReceiptAction(std::stoi(receiptId), "UNSUBSCRIBE" + args[0]);
-        protocol.removeSubscription(args[0]);
     }
 }
 
@@ -169,7 +178,7 @@ void ProcessorInput::handleReport(const std::vector<std::string>& args){
         // 5. Send the frame
         connection.sendFrameAscii(frame, '\0');
         
-        std::cout << "Sent event: " << event.get_name() << std::endl;
+        // std::cout << "Sent event: " << event.get_name() << std::endl; // TODO: remove
     }
 }
 

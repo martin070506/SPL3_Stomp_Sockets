@@ -1,0 +1,16 @@
+Italy vs France
+Game stats:
+General stats:
+active: false
+general game updates: 
+Italy stats:
+team a updates: 
+France stats:
+team b updates: 
+Game event reports:
+5400 -  End Game:
+
+description:
+Draw
+
+
