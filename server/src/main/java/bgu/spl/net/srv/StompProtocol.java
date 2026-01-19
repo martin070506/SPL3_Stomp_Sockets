@@ -1,21 +1,24 @@
 package bgu.spl.net.srv;
 
 import bgu.spl.net.api.StompMessagingProtocol;
+import bgu.spl.net.impl.data.Database;
+import bgu.spl.net.impl.data.LoginStatus;
 
 public class StompProtocol<T> implements StompMessagingProtocol<String> {
     public boolean shouldTerminate=false;
     private Connections<String> connections;
     private int connectionId;
-    private static int msgIdCounter = 0;
+    private boolean isConnected = false;
 
     /**
 	 * Used to initiate the current client protocol with it's personal connection ID and the connections implementation
 	**/
     
     public void start(int connectionId, Connections<String> connections){
-         this.connectionId=connectionId;
-         this.connections=connections;
-         shouldTerminate=false;
+         this.connectionId = connectionId;
+         this.connections = connections;
+         shouldTerminate = false;
+         isConnected = false;
     }
     
     public void process(String message){
@@ -39,7 +42,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
                 handleUnsubscribe(message);
                 break;
             default:
-                sendErrorFrame("Some Error Message In Initial Connection\n"); //TODO refactor to send actual error messages
+                sendErrorFrame("Unknown Command", null); 
                 break;
         }
     }
@@ -48,8 +51,11 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         return shouldTerminate;
     }
 
-    public void close(){
-        shouldTerminate=true;
+    public void close() {
+        shouldTerminate = true;
+        isConnected = false;
+
+        Database.getInstance().logout(connectionId);
         connections.disconnect(connectionId);
     }
 
@@ -67,85 +73,50 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         like subscriptions for each user that signed up
     */
     private void handleConnectFrame(String message) {
-        // Implement CONNECT frame handling
-        System.out.println("------------------------ GOT HERE SUCCESS!!!! -------------------------");
         String login = getHeaderValue(message, "login");
-        String receiptId = getHeaderValue(message, "receipt");
         String passcode = getHeaderValue(message, "passcode");
-        String version = getHeaderValue(message, "accept-version");
-        String host = getHeaderValue(message, "host");
+        String receiptId = getHeaderValue(message, "receipt");
 
-
-         if (login == null || passcode == null || version == null || host == null) {
-            // Construct Error Headers
-            String errorHeaderBlock = "message:Missing required headers\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Missing required headers in CONNECT frame" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate = true;
+        if (login == null || passcode == null) {
+            sendErrorFrame("Missing required headers", receiptId);
+            close();
             return;
         }
 
-        // Check if user is already logged in
-        // we dont need to check by id , because that specific problem is solved Client side by not allowing multiple connections with same client
-        if (isUserConnectedByUserName(login)) {
-            // 1. Prepare the Headers
-            String errorHeaders = "message:User already logged in\n";
-    
-            // CORRECTION: Check if the client asked for a receipt
-            if (receiptId != null) 
-                errorHeaders += "receipt-id:" + receiptId + "\n";
-
-            // 2. Construct the Frame
-            String errorBody = "User already logged in";
-            String errorFrame = "ERROR\n" +
-                                errorHeaders +
-                                "\n" + 
-                                errorBody + 
-                                "\u0000";   
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
-            
-            return;
-        }
+        LoginStatus status = Database.getInstance().login(connectionId, login, passcode);
         
-        if (connections.connect(connectionId, login, passcode)) {
-            
-            String connectedFrame = "CONNECTED\n" +
-                                    "version:1.2\n" +
-                                    "\n" + 
-                                    "\u0000";
-                                    
-            connections.send(connectionId, connectedFrame);
+        switch (status) {
+            case LOGGED_IN_SUCCESSFULLY:
+            case ADDED_NEW_USER:
+                isConnected = true; 
+                System.out.println("Login Successful: " + login);
+                
+                String connectedFrame = "CONNECTED\n" +
+                                        "version:1.2\n" +
+                                        "\n" + 
+                                        "\u0000";
+                connections.send(connectionId, connectedFrame);
+                
+                if (receiptId != null) 
+                    sendReceipt(receiptId);
+                break;
 
-        } 
-        else {
-            String errorHeaderBlock = "message:Wrong password\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
+            case WRONG_PASSWORD:
+                sendErrorFrame("Wrong password", receiptId);
+                close();
+                break;
 
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Password does not match" + 
-                                "\u0000";
+            case ALREADY_LOGGED_IN:
+                sendErrorFrame("User already logged in", receiptId);
+                close();
+                break;
 
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
+            case CLIENT_ALREADY_CONNECTED:
+                sendErrorFrame("User already logged in", receiptId);
+                close();
+                break;
         }
     }
-
 
     /**
      * 
@@ -157,87 +128,41 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
      * so i believe we somehow store that in the database client side
      */
     private void handleDisconnectFrame(String message) {
-
         String receiptId = getHeaderValue(message, "receipt");
 
-       if (receiptId == null) {
-            String errorHeaderBlock = "message:Missing required headers\n";
+        if (receiptId != null) 
+            sendReceipt(receiptId);
 
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Missing required headers in DISCONNECT frame" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            //shouldTerminate = true;
-            return;
-        }
-
-        if (receiptId != null) {
-            String receiptFrame = "RECEIPT\n" +
-                                "receipt-id:" + receiptId + "\n" +
-                                "\n" + 
-                                "\u0000"; 
-            connections.send(connectionId, receiptFrame);
-        }
-
-        connections.disconnect(connectionId);
-        //shouldTerminate = true; 
-        // we don change it here because we want the client to disconnect only after receiving the receipt frame / error frame
+        close(); 
     }
 
     private void handleSendFrame(String message) {
-    String destination = getHeaderValue(message, "destination");
-    String receiptId = getHeaderValue(message, "receipt");
-    String body = getBody(message);
+        String receiptId = getHeaderValue(message, "receipt");
 
-    if (!isUserConnectedById(connectionId)) {
-        String errorString = generateErrorString("User not logged in", 
-                                                 "You must be logged in to send messages.", 
-                                                 receiptId);
-        sendErrorFrame(errorString);
-        connections.disconnect(connectionId);
-        shouldTerminate = true; 
-        return;
+        if (!isConnected) {
+            sendErrorFrame("User not logged in", receiptId);
+            close();
+            return;
+        }
+
+        String destination = getHeaderValue(message, "destination");
+        String body = getBody(message);
+
+        if (destination == null || destination.isEmpty()) {
+            sendErrorFrame("No destination header found", receiptId);
+            return;
+        }
+
+        if (!connections.isSubscribed(destination, connectionId)) {
+            sendErrorFrame("User is not subscribed to topic " + destination, receiptId);
+            return;
+        }
+
+        connections.send(destination, body);
+
+        if (receiptId != null) 
+            sendReceipt(receiptId);
     }
-
-    if (destination == null || destination.isEmpty()) {
-        String errorString = generateErrorString("Malformatted frame", 
-                                                 "No destination header found", 
-                                                 receiptId);
-        sendErrorFrame(errorString);
-        connections.disconnect(connectionId);
-        shouldTerminate = true;
-        return;
-    }
-
-    if (!connections.isSubscribed(destination, connectionId)) {
-        String errorString = generateErrorString("Access Denied", 
-                                                 "User is not subscribed to topic " + destination, 
-                                                 receiptId);
-        sendErrorFrame(errorString);
-        connections.disconnect(connectionId);
-        shouldTerminate = true;
-        return;
-    }
-
-   
-    // the 'connections' object handles the broadcasting logic ([display message id, and subscription id for each receiver])
-    connections.send(destination, body);
-
-    if (receiptId != null) {
-        String receiptFrame = "RECEIPT\n" +
-                              "receipt-id:" + receiptId + "\n" +
-                              "\n" + 
-                              "\u0000"; 
-        connections.send(connectionId, receiptFrame);
-    }
-}
-
-   
-    
 
    
     /**
@@ -250,169 +175,84 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
     so we need on the client side somehow manage which channels hes subscribe to, and for each channel hes subscribe to he needs to hold his subscription id for that channel
     so again when the client says "leave usa/mexico" we know which subscription id to send
      */
-    private void handleSubscribeFrame(String message){
+    private void handleSubscribeFrame(String message) {
+        String receiptId = getHeaderValue(message, "receipt");
 
-        String destination= getHeaderValue(message, "destination");
-        String receiptId= getHeaderValue(message, "receipt");
-        String subscriptionId= getHeaderValue(message, "id");
-        System.out.println(destination + ":" + connections.isSubscribed(destination, connectionId));
-        if (destination == null || subscriptionId == null){
-            String errorHeaderBlock = "message:Missing required headers\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Missing required headers in SUBSCRIBE frame" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
+        if (!isConnected) {
+            sendErrorFrame("User not logged in", receiptId);
+            close();
             return;
         }
 
-        int receiptIdNum;
-        int subId;
+        String destination = getHeaderValue(message, "destination");
+        String subscriptionId = getHeaderValue(message, "id");
+
+        if (destination == null || subscriptionId == null) {
+            sendErrorFrame("Missing required headers", receiptId);
+            return;
+        }
+
         try {
-            receiptIdNum=Integer.parseInt(receiptId);
-            subId=Integer.parseInt(subscriptionId);
-        } catch (NumberFormatException e){
-            String errorHeaderBlock = "message:Invalid header format\n";
+            int subId = Integer.parseInt(subscriptionId);
+            connections.subscribe(destination, connectionId, subId);
+            
             if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Invalid header format in SUBSCRIBE frame" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
-            return;
-        }
-
-        if (!isUserConnectedById(connectionId)) {
-            String errorHeaderBlock = "message:User not connected\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "User not connected" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
-            return;
-        }
-        if(connections.isSubscribed(destination, connectionId)){
-            String errorHeaderBlock = "message:User already subscribed to "+ destination + "\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "User already subscribed" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
-            return;
-        }
-
-        connections.subscribe(destination,connectionId,subId);
-        if (receiptId != null) {
-            String receiptFrame = "RECEIPT\n" +
-                                "receipt-id:" + receiptId + "\n" +
-                                "\n" + 
-                                "\u0000"; 
-            connections.send(connectionId, receiptFrame);
+                sendReceipt(receiptId);
+            
+        } catch (NumberFormatException e) {
+            sendErrorFrame("Invalid subscription ID", receiptId);
         }
     }
 
-    private void handleUnsubscribe(String message){
-        String subscriptionId= getHeaderValue(message, "id");
-        String receiptId= getHeaderValue(message, "receipt");
+    private void handleUnsubscribe(String message) {
+        String receiptId = getHeaderValue(message, "receipt");
 
-        if (!isUserConnectedById(connectionId)) {
-            String errorHeaderBlock = "message:User not connected\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "User not connected" + 
-                                "\u0000";
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
+        if (!isConnected) {
+            sendErrorFrame("User not logged in", receiptId);
+            close();
             return;
         }
+
+        String subscriptionId = getHeaderValue(message, "id");
 
         if (subscriptionId == null) {
-            String errorHeaderBlock = "message:Missing required headers\n";
-            if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-            
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Missing required headers in UNSUBSCRIBE frame" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
+            sendErrorFrame("Missing required headers", receiptId);
             return;
         }
 
-        int subIdNum;
         try {
-            subIdNum = Integer.parseInt(subscriptionId);
-        } catch (NumberFormatException e){
-            String errorHeaderBlock = "message:Invalid header format\n";
+            int subId = Integer.parseInt(subscriptionId);
+            connections.unsubscribe(subId);
+            
             if (receiptId != null) 
-                errorHeaderBlock += "receipt-id:" + receiptId + "\n";
-
-            String errorFrame = "ERROR\n" +
-                                errorHeaderBlock +
-                                "\n" +
-                                "Invalid header format in UNSUBSCRIBE frame" + 
-                                "\u0000";
-
-            sendErrorFrame(errorFrame);
-            connections.disconnect(connectionId);
-            shouldTerminate=true;
-            return;
-        }
-
-        //I looked at the pdf and searched for what to do if client unsubscribes from somewhere he isnt subscribed to
-        // but couldnt find anything so i assumed its just a no-op, anyways in the unsubscribe method it wont throw an error
-        //but i dont think its a possible scenario because the client side handles giving the server side the id for the subscription, 
-        // so he cannot give us something he isnt subscribed to
-
-        connections.unsubscribe(subIdNum);
-        if (receiptId != null) { 
-            String receiptFrame = "RECEIPT\n" +
-                                "receipt-id:" + receiptId + "\n" +
-                                "\n" + 
-                                "\u0000"; 
-            connections.send(connectionId, receiptFrame);
+                sendReceipt(receiptId);
+            
+        } catch (NumberFormatException e) {
+            sendErrorFrame("Invalid subscription ID", receiptId);
         }
     }
 
-    private void sendErrorFrame(String errorFrame){
-           connections.send(this.connectionId, errorFrame);
+    private void sendReceipt(String receiptId) {
+        String frame = "RECEIPT\n" +
+                       "receipt-id:" + receiptId + "\n" +
+                       "\n" + 
+                       "\u0000"; 
+        connections.send(connectionId, frame);
     }
+    
+    private void sendErrorFrame(String messageBody, String receiptId) {
+        String headers = "message:Error\n";
+        if (receiptId != null) headers += "receipt-id:" + receiptId + "\n";
+        
+        String frame = "ERROR\n" +
+                       headers +
+                       "\n" +
+                       messageBody +
+                       "\u0000";
+        connections.send(connectionId, frame);
+    }
+    
+    
     
     private String getHeaderValue(String message, String headerName) {
         String[] lines = message.split("\n");
@@ -434,31 +274,5 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
         String body = message.substring(splitIndex + 2);
         return body.replace("\u0000", ""); 
-    }
-
-    private String generateUniqueId() {
-        return String.valueOf(msgIdCounter++);
-    }
-
-    private boolean isUserConnectedByUserName(String userName) {
-        return connections.isUserConnectedByUserName(userName);
-    }
-    private boolean isUserConnectedById(int connectionId) {
-        return connections.isUserConnectedById(connectionId);
-    }
-
-    private String generateErrorString(String messageHeader, String body, String receiptId) {
-        String headerBlock = "message:" + messageHeader + "\n";
-        
-        // Include receipt-id in the error if the user asked for one
-        if (receiptId != null)
-            headerBlock += "receipt-id:" + receiptId + "\n";
-
-        return "ERROR\n" +
-            headerBlock +
-            "\n" +
-            body + 
-            "\u0000";
-    }
-    
+    }    
 }
