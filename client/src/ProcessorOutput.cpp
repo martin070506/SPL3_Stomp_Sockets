@@ -81,7 +81,7 @@ void ProcessorOutput::handleMessage(const std::map<std::string, std::string>& he
         else if (line.find("user:") == 0) 
              user = line.substr(5); // Skip "user:" (5 chars) handle case without space
     }
-
+    std::cout<<'\n'<< body<<'\n'<<std::endl;
     Event event(body);
 
     protocol.addEvent(event, user);

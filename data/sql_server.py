@@ -10,7 +10,9 @@ the methods below.
 
 import socket
 import sys
+import os
 import threading
+import sqlite3
 
 
 SERVER_NAME = "STOMP_PYTHON_SQL_SERVER"  # DO NOT CHANGE!
@@ -30,15 +32,67 @@ def recv_null_terminated(sock: socket.socket) -> str:
 
 
 def init_database():
-    pass
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        
+        # 1. Users table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                          (username TEXT PRIMARY KEY,
+                           password TEXT,
+                           registration_date TEXT)''')
+        
+        # 2. Login History table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS login_history
+                          (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                           username TEXT,
+                           login_time TEXT,
+                           logout_time TEXT)''')
+        
+        # 3. File Tracking table (Reports)
+        cursor.execute('''CREATE TABLE IF NOT EXISTS file_tracking
+                          (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                           username TEXT,
+                           filename TEXT,
+                           upload_time TEXT,
+                           game_channel TEXT)''')
+        
+        conn.commit()
+        conn.close()
+        print(f"[{SERVER_NAME}] Database initialized successfully.")
+    except Exception as e:
+        print(f"[{SERVER_NAME}] Error initializing database: {e}")
 
 
 def execute_sql_command(sql_command: str) -> str:
-    return "done"
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql_command)
+            conn.commit()
+            return "SUCCESS"
+    except sqlite3.Error as e:
+        return f"ERROR: {e}"
 
 
 def execute_sql_query(sql_query: str) -> str:
-    return "done"
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql_query)
+            rows = cursor.fetchall()
+            
+            # Format the result for Java parsing (pipe separated)
+            if not rows:
+                return "SUCCESS|No results"
+            
+            response = "SUCCESS"
+            for row in rows:
+                response += "|" + str(row)
+            return response
+            
+    except sqlite3.Error as e:
+        return f"ERROR: {e}"
 
 
 def handle_client(client_socket: socket.socket, addr):
@@ -50,10 +104,22 @@ def handle_client(client_socket: socket.socket, addr):
             if message == "":
                 break
 
-            print(f"[{SERVER_NAME}] Received:")
-            print(message)
+            print(f"[{SERVER_NAME}] Received SQL: {message}")
 
-            client_socket.sendall(b"done\0")
+            # --- FIX STARTS HERE ---
+            
+            response = ""
+            # Check if it is a read (SELECT) or write (INSERT/UPDATE/DELETE) operation
+            if message.strip().upper().startswith("SELECT"):
+                response = execute_sql_query(message)
+            else:
+                response = execute_sql_command(message)
+            
+            # Send the actual database response back to Java
+            # (The Java code expects null-terminated strings)
+            client_socket.sendall(response.encode("utf-8") + b"\0")
+            
+            # --- FIX ENDS HERE ---
 
     except Exception as e:
         print(f"[{SERVER_NAME}] Error handling client {addr}: {e}")
@@ -101,5 +167,5 @@ if __name__ == "__main__":
             port = int(raw_port)
         except ValueError:
             print(f"Invalid port '{raw_port}', falling back to default {port}")
-
+    init_database()
     start_server(port=port)

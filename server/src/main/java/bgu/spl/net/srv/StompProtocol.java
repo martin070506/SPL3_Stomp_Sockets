@@ -138,7 +138,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
     private void handleSendFrame(String message) {
         String receiptId = getHeaderValue(message, "receipt");
-
+        String filename = getHeaderValue(message, "filename");
+        String username = getHeaderValue(message, "user");
         if (!isConnected) {
             sendErrorFrame("User not logged in", receiptId);
             close();
@@ -159,6 +160,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         }
 
         connections.send(destination, body);
+        Database.getInstance().trackFileUpload(username , filename, destination);
 
         if (receiptId != null) 
             sendReceipt(receiptId);
@@ -259,9 +261,6 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
         for (String line : lines) {
             if (line.startsWith(headerName + ":")) 
                 return line.substring(headerName.length() + 1);
-
-            if (line.isEmpty()) 
-                break; 
         }
         
         return null;
