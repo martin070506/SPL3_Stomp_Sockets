@@ -146,13 +146,13 @@ void ProcessorInput::handleReport(const std::vector<std::string>& args){
    
     for (const Event& event : data.events) {
         
-        
         std::string frame = "SEND\n";
         frame += "destination:/" + data.team_a_name + "_" + data.team_b_name + "\n"; // Example topic name
         frame += "\n"; // Empty line between headers and body
 
         // Body of the frame (The Event Data)
         frame += "user: " + protocol.getUsername()+ "\n";
+        frame += "filename:" + args[0] + "\n";
         frame += "team a: " + teamA + "\n";
         frame += "team b: " + teamB + "\n";
         frame += "event name: " + event.get_name() + "\n";
