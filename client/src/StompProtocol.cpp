@@ -110,7 +110,8 @@ void StompProtocol::waitForConnection() {
              connection = nullptr;
              continue;
         }
-        std::cout <<"Frame Gotten from server:\n" <<  answer <<std::endl;
+        // std::cout <<"Frame Gotten from server:\n" <<  answer <<std::endl; // TODO: remove
+        std::cout << "Login successful" << std::endl;
 
         if (answer.find("CONNECTED") != std::string::npos) {
             this->isConnected = true;
@@ -172,7 +173,7 @@ void StompProtocol::addEvent(const Event& event, const std::string& username) {
     std::lock_guard<std::mutex> lock(mtx);
 
     std::string gameName = event.get_team_a_name() + "_" + event.get_team_b_name();
-    std::cout<<"added gameName: "<<gameName<<" to user: "<<username<<std::endl;
+    // std::cout<<"added gameName: "<<gameName<<" to user: "<<username<<std::endl; // TODO: remove
     userToEvents[username][gameName].push_back(event);
 }
 
@@ -240,4 +241,36 @@ void StompProtocol::signalLogoutComplete() {
     logoutCV.notify_all(); // Wake up!
 }
 
+std::string StompProtocol::getCommandTypeByReceiptId(int receiptId) {
+    std::lock_guard<std::mutex> lock(mtx); 
+    if (receiptActions.count(receiptId)) {
+        std::string action = receiptActions[receiptId];
+        size_t spacePos = action.find(' ');
+        if (spacePos != std::string::npos) 
+            return action.substr(0, spacePos); 
+
+        return action;
+    }
+    return "";
+}
+
+std::string StompProtocol::getGameNameByReceiptId(int receiptId) {
+    std::lock_guard<std::mutex> lock(mtx);
+    if (receiptActions.count(receiptId)) {
+        std::string action = receiptActions[receiptId];
+        size_t spacePos = action.find(' ');
+        if (spacePos != std::string::npos) 
+            return action.substr(spacePos + 1); 
+    }
+    return ""; 
+}
+
+void StompProtocol::close() {
+    std::lock_guard<std::mutex> lock(mtx);
+    if (connection) 
+        connection->close();
+    
+    isConnected = false;
+    shouldTerminate = true;
+}
 

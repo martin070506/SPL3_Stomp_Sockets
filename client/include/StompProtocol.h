@@ -69,5 +69,12 @@ public:
     bool getConnected();
     void setConnected(bool status); //
     std::string getUsername();
+
+    StompProtocol(const StompProtocol&) = delete;
+    StompProtocol& operator=(const StompProtocol&) = delete;
+
+    std::string getGameNameByReceiptId(int receiptId);
+    std::string getCommandTypeByReceiptId(int receiptId);
+    void close();
 };
 

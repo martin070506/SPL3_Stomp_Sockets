@@ -30,8 +30,8 @@ int main(int argc, char *argv[]) {
 
             if (line.empty()) 
                 continue;
-
-            input.process(line);
+            if (!protocol.getShouldTerminate())
+                input.process(line);
         }
 
         // Force close to wake up the listener thread if it's stuck in read

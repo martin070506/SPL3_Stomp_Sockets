@@ -90,6 +90,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
+            shouldTerminate = true;
             return;
         }
 

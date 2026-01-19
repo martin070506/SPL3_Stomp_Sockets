@@ -29,16 +29,19 @@ void ProcessorOutput::run() {
 }
 
 void ProcessorOutput::process(const std::string& frame) {
-    std::cout << "Frame Gotten:\n" << frame <<std::endl;
+    // std::cout << "Frame Gotten:\n" << frame <<std::endl; // TODO: remove
     std::stringstream ss(frame);
     std::string command;
-    
     std::getline(ss, command);
+    if (!command.empty() && command.back() == '\r') command.pop_back(); // Chat seggested for /r 
 
     std::string line;
     std::map<std::string, std::string> headers;
     
-    while (std::getline(ss, line) && line != "") {
+    while (std::getline(ss, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back(); // Chat seggested for /r 
+        if (line.empty()) break;
+
         size_t colonPos = line.find(':');
         if (colonPos != std::string::npos) {
             std::string key = line.substr(0, colonPos);
@@ -54,11 +57,11 @@ void ProcessorOutput::process(const std::string& frame) {
     
     if (command == "CONNECTED") 
         handleConnected(headers);
-    if (command == "MESSAGE") 
+    else if (command == "MESSAGE") 
         handleMessage(headers, body);
-    if (command == "RECEIPT") 
+    else if (command == "RECEIPT") 
         handleReceipt(headers);
-    if (command == "ERROR") 
+    else if (command == "ERROR") 
         handleError(headers, body);
 }
 
@@ -73,20 +76,18 @@ void ProcessorOutput::handleMessage(const std::map<std::string, std::string>& he
     std::string line;
     // Read the first line, which usually contains "user: name"
     if (std::getline(ss, line)) {
-        if (line.find("user: ") == 0) {
+        if (line.find("user: ") == 0) 
             user = line.substr(6); // Skip "user: " (6 chars)
-        }
-        else if (line.find("user:") == 0) {
+        else if (line.find("user:") == 0) 
              user = line.substr(5); // Skip "user:" (5 chars) handle case without space
-        }
     }
 
     Event event(body);
 
     protocol.addEvent(event, user);
 
-    std::cout << "Game update received from " << user << ": " 
-              << event.get_name() << std::endl;
+    // std::cout << "Game update received from " << user << ": " 
+    //          << event.get_name() << std::endl;
 }
 
 void ProcessorOutput::handleReceipt(const std::map<std::string, std::string>& headers) {
@@ -94,6 +95,17 @@ void ProcessorOutput::handleReceipt(const std::map<std::string, std::string>& he
     if (headers.count("receipt-id")) 
         try {
             int receiptId = std::stoi(headers.at("receipt-id"));
+
+            std::string commandType = protocol.getCommandTypeByReceiptId(receiptId);
+            std::string gameName = protocol.getGameNameByReceiptId(receiptId);
+
+            if (commandType == "join") 
+                std::cout << "Joined channel " << gameName << std::endl;
+            else if (commandType == "exit") 
+                std::cout << "Exited channel " << gameName << std::endl;
+            else if (commandType == "logout") 
+                protocol.close(); 
+
             protocol.processReceipt(receiptId);
         } catch (const std::exception& e) {
             std::cout << "Error parsing receipt-id" << std::endl;
@@ -113,3 +125,4 @@ void ProcessorOutput::handleError(const std::map<std::string, std::string>& head
     if (protocol.getConnection()) 
         protocol.getConnection()->close();
 }
+
