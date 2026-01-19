@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.xml.crypto.Data;
+
+import bgu.spl.net.impl.data.User;
+
 public class ConnectionsImpl<T> implements Connections<String> {
 
     private ConcurrentHashMap<Integer, ConnectionHandler<String>> activeConnections;
@@ -109,7 +113,13 @@ public class ConnectionsImpl<T> implements Connections<String> {
         return (subs != null && subs.containsKey(connectionId));
     }
 
-
+    public boolean isUserConnectedByUserName(String userName){
+        for (User user : loggedInUsers.values()){
+            if (user.name.equals(userName))
+                return true;
+        }
+        return false;
+    }
     public void printMap(ConcurrentHashMap<Integer,Integer> map) {
         // Uses the built-in forEach method
         map.forEach((k, v) -> System.out.println(k + ":" + v));

@@ -111,11 +111,12 @@ void StompProtocol::waitForConnection() {
              continue;
         }
         // std::cout <<"Frame Gotten from server:\n" <<  answer <<std::endl; // TODO: remove
-        std::cout << "Login successful" << std::endl;
+        
 
         if (answer.find("CONNECTED") != std::string::npos) {
             this->isConnected = true;
             this->username=username;
+            std::cout << "Login successful" << std::endl;
             return; 
         } else {
             connection->close();
@@ -124,6 +125,7 @@ void StompProtocol::waitForConnection() {
         }
     }
 }
+
 
 void StompProtocol::processReceipt(int receiptId) {
     std::lock_guard<std::mutex> lock(mtx); 

@@ -17,20 +17,18 @@ public class EchoServer {
         // you can use any server... 
         Supplier<StompMessagingProtocol<String>> protocolFactory = () -> new StompProtocol<String>();
         Supplier<MessageEncoderDecoder<String>> encdecFactory = () -> new StompEncoderDecoder();
-        Connections<String> connections = new ConnectionsImpl<>();
-        Server.threadPerClient(
+        // Server.threadPerClient(
+        //         7777, //port
+        //         protocolFactory, //protocol factory
+        //         encdecFactory //message encoder decoder factory
+        // ).serve();
+
+        Server.reactor(
+                Runtime.getRuntime().availableProcessors(),
                 7777, //port
                 protocolFactory, //protocol factory
-                encdecFactory,
-                connections //message encoder decoder factory
+                encdecFactory //message encoder decoder factory
         ).serve();
-
-        // Server.reactor(
-        //         Runtime.getRuntime().availableProcessors(),
-        //         7777, //port
-        //         () -> new EchoProtocol<>(), //protocol factory
-        //         LineMessageEncoderDecoder::new //message encoder decoder factory
-        // ).serve();
         // login 127.0.0.1:7777 hello world
     }
 }
