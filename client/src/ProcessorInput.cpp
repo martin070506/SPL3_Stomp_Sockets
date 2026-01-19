@@ -195,10 +195,15 @@ void ProcessorInput::handleSummary(const std::vector<std::string>& args){
 
     // 2. Validate User Existence (Safe Check)
     // If we don't check this, accessing getUserEvents might throw or create garbage data
+    if(!protocol.isSubscribedTo(game_name)){
+        std::cout << "You are not subscribed to: " << game_name << std::endl;
+        return;
+    }
     if(protocol.getUserEvents(user_name).empty()){ 
          std::cout << "Has no updates from user: " << user_name << std::endl;
          return;
     }
+    
 
     // 3. Validate Game Existence
     // Check if the specific game exists in the user's map

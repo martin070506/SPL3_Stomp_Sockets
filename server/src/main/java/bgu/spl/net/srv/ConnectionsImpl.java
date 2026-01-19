@@ -5,12 +5,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.xml.crypto.Data;
+
+import bgu.spl.net.impl.data.User;
+
 public class ConnectionsImpl<T> implements Connections<String> {
 
     private ConcurrentHashMap<Integer, ConnectionHandler<String>> activeConnections;
     private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribersConnectionId; // channel -> (connectionId -> subscriptionId)
     private ConcurrentHashMap<Integer, SubscriptionPair> subscriptionIdToPair; // subscriptionId -> (channel, connectionId)
-    private ConcurrentHashMap<Integer,String> loggedInUsers;
+    private ConcurrentHashMap<Integer,User> loggedInUsers;
     private int connectionIdCounter;
 
 
@@ -75,7 +79,9 @@ public class ConnectionsImpl<T> implements Connections<String> {
     public boolean connect(int connectionId, String userName, String password) { 
        try {
         // some processing to check if the userName and password are valid
-        loggedInUsers.put(connectionId, userName);
+        loggedInUsers.put(connectionId,new User(connectionId, userName, password));
+        User user = loggedInUsers.get(connectionId);
+        user.login();
        } catch (Exception e){}
 
        return true; //just a placeholder until i know how to access the user data base
@@ -114,11 +120,6 @@ public class ConnectionsImpl<T> implements Connections<String> {
         channelSubscribersConnectionId.get(channel).remove(connectionId);
         subscriptionIdToPair.remove(subscriptionId);
     }
-
-
-    public boolean isUserConnectedByUserName(String userName) {
-        return loggedInUsers.containsValue(userName);
-    }
     
     public boolean isUserConnectedById(int connectionId) {
         return loggedInUsers.containsKey(connectionId);
@@ -131,7 +132,13 @@ public class ConnectionsImpl<T> implements Connections<String> {
         return (subs != null && subs.containsKey(connectionId));
     }
 
-
+    public boolean isUserConnectedByUserName(String userName){
+        for (User user : loggedInUsers.values()){
+            if (user.name.equals(userName))
+                return true;
+        }
+        return false;
+    }
     public void printMap(ConcurrentHashMap<Integer,Integer> map) {
         // Uses the built-in forEach method
         map.forEach((k, v) -> System.out.println(k + ":" + v));

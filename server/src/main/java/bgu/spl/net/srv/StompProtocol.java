@@ -90,7 +90,6 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
 
             sendErrorFrame(errorFrame);
             connections.disconnect(connectionId);
-            shouldTerminate = true;
             return;
         }
 
@@ -443,6 +442,7 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
     private boolean isUserConnectedByUserName(String userName) {
         return connections.isUserConnectedByUserName(userName);
     }
+    
     private boolean isUserConnectedById(int connectionId) {
         return connections.isUserConnectedById(connectionId);
     }
