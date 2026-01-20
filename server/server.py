@@ -4,7 +4,7 @@ import os
 
 HOST = '127.0.0.1'
 PORT = 7778
-DB_FILE = 'database.db'
+DB_FILE = 'stomp_server.db'
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
