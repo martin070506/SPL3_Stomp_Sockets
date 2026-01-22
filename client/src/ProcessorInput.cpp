@@ -18,20 +18,22 @@ void ProcessorInput::process(const std::string& input) {
     while (ss >> arg) 
         args.push_back(arg);
 
-    if (command == "join") handleJoin(args);
-    else if (command == "exit") handleExit(args);
-    else if (command == "logout") handleLogout(args);
-    else if (command == "report") handleReport(args);
-    else if (command == "summary") handleSummary(args);
-    else if (command == "login") {
+    if (command == "join") 
+        handleJoin(args);
+    else if (command == "exit") 
+        handleExit(args);
+    else if (command == "logout") 
+        handleLogout(args);
+    else if (command == "report") 
+        handleReport(args);
+    else if (command == "summary") 
+        handleSummary(args);
+    else if (command == "login") 
         std::cout << "The client is already logged in, log out before trying again" << std::endl;
-    }
-    else if (!protocol.getConnected()) {
+    else if (!protocol.getConnected()) 
         std::cout << "User Must Login first" << std::endl;
-    }
-    else {
+    else 
         std::cout << "Invalid Command, Enter Something Valid" << std::endl;
-    }
 }
 
 void ProcessorInput::handleJoin(const std::vector<std::string>& args) {

@@ -56,19 +56,19 @@ void StompProtocol::waitForConnection() {
         std::string arg;
         while (ss >> arg) 
             args.push_back(arg);
-        if(args.size()!=3){
+        if (args.size()!=3) {
             std::cout << "Error: Invalid command format" << std::endl;
             continue;
         }
-        hostPort=args[0];
-        username=args[1];
-        password=args[2];
-        for (std::string arg : args){
-            if(arg.empty()|| arg==""){
+
+        hostPort = args[0];
+        username = args[1];
+        password = args[2];
+        for (std::string arg : args) 
+            if (arg.empty()|| arg=="") {
                 std::cout << "Error: Invalid command format" << std::endl;
                 continue;
             }
-        }
 
         size_t colonPos = hostPort.find(':');
         if (colonPos == std::string::npos) {
@@ -118,12 +118,29 @@ void StompProtocol::waitForConnection() {
         // std::cout <<"Frame Gotten from server:\n" <<  answer <<std::endl; // TODO: remove
         
 
-        if (answer.find("CONNECTED") != std::string::npos) {
+        if (answer.find("CONNECTED") == 0) { 
             this->isConnected = true;
-            this->username=username;
+            this->username = username;
             std::cout << "Login successful" << std::endl;
             return; 
-        } else {
+        } 
+
+        else if (answer.find("ERROR") != std::string::npos) {
+
+            if (answer.find("Wrong password") != std::string::npos) 
+                std::cout << "Wrong password" << std::endl;
+            else if (answer.find("User already logged in") != std::string::npos) 
+                std::cout << "User already logged in" << std::endl;
+            else
+                std::cout << "Login failed. Server response:\n" << answer << std::endl;
+    
+            connection->close();
+            delete connection;
+            connection = nullptr;
+        } 
+
+        else {
+            std::cout << "Error: Unexpected response from server during login:\n" << answer << std::endl;
             connection->close();
             delete connection;
             connection = nullptr;
