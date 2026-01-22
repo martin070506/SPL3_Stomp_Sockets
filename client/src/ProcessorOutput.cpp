@@ -29,11 +29,12 @@ void ProcessorOutput::run() {
 }
 
 void ProcessorOutput::process(const std::string& frame) {
-    // std::cout << "Frame Gotten:\n" << frame <<std::endl; // TODO: remove
+
+
     std::stringstream ss(frame);
     std::string command;
     std::getline(ss, command);
-    if (!command.empty() && command.back() == '\r') command.pop_back(); // Chat seggested for /r 
+    if (!command.empty() && command.back() == '\r') command.pop_back(); 
 
     std::string line;
     std::map<std::string, std::string> headers;
@@ -74,12 +75,11 @@ void ProcessorOutput::handleMessage(const std::map<std::string, std::string>& he
     std::string user = "";
     std::stringstream ss(body);
     std::string line;
-    // Read the first line, which usually contains "user: name"
     if (std::getline(ss, line)) {
         if (line.find("user: ") == 0) 
-            user = line.substr(6); // Skip "user: " (6 chars)
+            user = line.substr(6); 
         else if (line.find("user:") == 0) 
-             user = line.substr(5); // Skip "user:" (5 chars) handle case without space
+             user = line.substr(5);
     }
     std::cout<<'\n'<< body<<'\n'<<std::endl;
     Event event(body);

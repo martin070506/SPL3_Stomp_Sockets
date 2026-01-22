@@ -244,7 +244,8 @@ public class StompProtocol<T> implements StompMessagingProtocol<String> {
     
     private void sendErrorFrame(String messageBody, String receiptId) {
         String headers = "message:Error\n";
-        if (receiptId != null) headers += "receipt-id:" + receiptId + "\n";
+        if (receiptId != null) 
+            headers += "receipt-id:" + receiptId + "\n";
         
         String frame = "ERROR\n" +
                        headers +

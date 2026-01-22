@@ -1,4 +1,4 @@
-#include "../include/event.h" // Check capitalization (Event.h vs event.h)
+#include "../include/event.h"
 #include "../include/json.hpp"
 #include <iostream>
 #include <fstream>
@@ -9,7 +9,7 @@
 
 using json = nlohmann::json;
 
-// 1. Main Constructor
+
 Event::Event(std::string team_a_name, std::string team_b_name, std::string name, int time,
              std::map<std::string, std::string> game_updates, std::map<std::string, std::string> team_a_updates,
              std::map<std::string, std::string> team_b_updates, std::string discription) : 
@@ -22,11 +22,9 @@ Event::Event(std::string team_a_name, std::string team_b_name, std::string name,
     team_b_updates(team_b_updates),
     description(discription) {}
 
-// 2. Destructor (Was missing!)
 Event::~Event() {
 }
 
-// 3. String Parser Constructor
 Event::Event(const std::string &frame_body) : 
     team_a_name(""),
     team_b_name(""),
@@ -44,13 +42,11 @@ Event::Event(const std::string &frame_body) :
     while (std::getline(ss, line)) {
 
         if (line.find("team a:") == 0 && current_section == "") {
-            // Check if there is a space at index 7
             int skip = (line.length() > 7 && line[7] == ' ') ? 8 : 7;
             team_a_name = line.substr(skip);
         }
         
         if (line.find("team b:") == 0 && current_section == "") {
-            // Check if there is a space at index 7
             int skip = (line.length() > 7 && line[7] == ' ') ? 8 : 7;
             team_b_name = line.substr(skip);
         }
@@ -97,7 +93,7 @@ Event::Event(const std::string &frame_body) :
     }
 }
 
-// Getters
+
 const std::string& Event::get_team_a_name() const { return this->team_a_name; }
 const std::string &Event::get_team_b_name() const { return this->team_b_name; }
 const std::string &Event::get_name() const { return this->name; }
@@ -108,10 +104,16 @@ const std::map<std::string, std::string> &Event::get_team_b_updates() const { re
 const std::string &Event::get_discription() const { return this->description; }
 
 
-// JSON Parser
+
 names_and_events parseEventsFile(std::string json_path)
 {
     std::ifstream f(json_path);
+
+    if (!f.is_open()) {
+        std::cerr << "Error: Could not open file " << json_path << std::endl;
+        return names_and_events{"", "", {}}; 
+    }
+
     json data = json::parse(f);
 
     std::string team_a_name = data["team a"];
@@ -151,7 +153,7 @@ names_and_events parseEventsFile(std::string json_path)
                 team_b_updates[update.key()] = update.value().dump();
         }
         
-        // This now matches the corrected Header order
+
         events.push_back(Event(team_a_name, team_b_name, name, time, game_updates, team_a_updates, team_b_updates, description));
     }
     names_and_events events_and_names{team_a_name, team_b_name, events};

@@ -14,7 +14,7 @@ import bgu.spl.net.srv.StompProtocol;
 public class StompServer {
 
     public static void main(String[] args) {
-        // you can use any server... 
+
         Supplier<StompMessagingProtocol<String>> protocolFactory = () -> new StompProtocol<String>();
         Supplier<MessageEncoderDecoder<String>> encdecFactory = () -> new StompEncoderDecoder();
 
@@ -25,20 +25,20 @@ public class StompServer {
         
         if(args[1].equals("tpc")){
             Server.threadPerClient(
-                Integer.parseInt(args[0]), //port
-                protocolFactory, //protocol factory
-                encdecFactory //message encoder decoder factory
+                Integer.parseInt(args[0]), 
+                protocolFactory, 
+                encdecFactory 
             ).serve();
         }
         
         if(args[1].equals("reactor")){
             Server.reactor(
                 Runtime.getRuntime().availableProcessors(),
-                Integer.parseInt(args[0]), //port
-                protocolFactory, //protocol factory
-                encdecFactory //message encoder decoder factory
+                Integer.parseInt(args[0]), 
+                protocolFactory, 
+                encdecFactory 
             ).serve();
         }
-        Database.getInstance().printReport(); //initialize the database
+        Database.getInstance().printReport(); 
     }
 }

@@ -27,20 +27,21 @@ int main(int argc, char *argv[]) {
             
             std::cin.getline(buf, bufsize);
             std::string line(buf);
-
+            
             if (line.empty()) 
                 continue;
             if (!protocol.getShouldTerminate())
                 input.process(line);
         }
 
-        // Force close to wake up the listener thread if it's stuck in read
+
         if (protocol.getConnection())
             protocol.getConnection()->close();
 
         if (listenerThread.joinable()) 
             listenerThread.join();
     }
+
     delete protocol.getConnection();
     return 0;
 }

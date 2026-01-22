@@ -17,8 +17,8 @@ public class EchoClient {
                       "host:stomp.cs.bgu.ac.il\n" +
                       "login:guest\n" +
                       "passcode:guest\n" +
-                      "receipt:77\n" + // Requesting a receipt with ID 77
-                      "\n" };       // The NULL byte (End of Frame)};
+                      "receipt:77\n" + 
+                      "\n" };   
         }
 
         // if (args.length < 2) {
@@ -26,7 +26,7 @@ public class EchoClient {
         //     System.exit(1);
         // }
 
-        //BufferedReader and BufferedWriter automatically using UTF-8 encoding
+
         try (Socket sock = new Socket("127.0.0.1", 7777);
                 BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()))) {

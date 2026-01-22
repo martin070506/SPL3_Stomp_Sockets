@@ -11,10 +11,15 @@ StompProtocol::StompProtocol() :
     shouldTerminate(false),
     isConnected(false),
     isError(false),
-    receiptActions(std::map<int,std::string>()),
-    userToEvents(std::map<std::string, std::map<std::string, std::vector<Event>>>()),
+    receiptActions(),
+    userToEvents(),
     connection(nullptr),
-    channelToSubId(std::map<std::string,int>()) {}
+    channelToSubId(),
+    username(),      
+    mtx(),    
+    logoutMutex(),  
+    logoutCV()       
+{}
 
 StompProtocol::~StompProtocol() {
     if (connection)
@@ -80,7 +85,7 @@ void StompProtocol::waitForConnection() {
         // std::cout << "GOT HERE---> host:" + host + " port:" << port  << std::endl;
         if (!connection->connect()) {
             std::cerr << "Error: Could not connect to server " << host << ":" << port << std::endl;
-            // Clean up immediately on failure so we can try again
+
             delete connection;
             connection = nullptr;
             continue;
@@ -222,7 +227,7 @@ bool StompProtocol::getIsError() {
     return isError;
 }
 
-bool StompProtocol::setIsError(bool val) {
+void StompProtocol::setIsError(bool val) {
     isError = val;
 }
 
@@ -240,7 +245,7 @@ void StompProtocol::signalLogoutComplete() {
         std::lock_guard<std::mutex> lock(logoutMutex);
         isConnected = false;
     }
-    logoutCV.notify_all(); // Wake up!
+    logoutCV.notify_all();
 }
 
 std::string StompProtocol::getCommandTypeByReceiptId(int receiptId) {

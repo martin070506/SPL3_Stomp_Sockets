@@ -12,8 +12,8 @@ import bgu.spl.net.impl.data.User;
 public class ConnectionsImpl<T> implements Connections<String> {
 
     private ConcurrentHashMap<Integer, ConnectionHandler<String>> activeConnections;
-    private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribersConnectionId; // channel -> (connectionId -> subscriptionId)
-    private ConcurrentHashMap<Integer, SubscriptionPair> subscriptionIdToPair; // subscriptionId -> (channel, connectionId)
+    private ConcurrentHashMap<String, ConcurrentHashMap<Integer, Integer>> channelSubscribersConnectionId; 
+    private ConcurrentHashMap<Integer, SubscriptionPair> subscriptionIdToPair; 
     private ConcurrentHashMap<Integer,User> loggedInUsers;
     private int connectionIdCounter;
 
@@ -75,19 +75,17 @@ public class ConnectionsImpl<T> implements Connections<String> {
             }
     }
 
-    //adds an *actual* connection as if a user sent a CONNECT packet with UN and PASS , actual login is in python and the packet  is gonna be handled in proccess (assumes it worked)
+
     public boolean connect(int connectionId, String userName, String password) { 
        try {
-        // some processing to check if the userName and password are valid
         loggedInUsers.put(connectionId,new User(connectionId, userName, password));
         User user = loggedInUsers.get(connectionId);
         user.login();
        } catch (Exception e){}
 
-       return true; //just a placeholder until i know how to access the user data base
+       return true; 
     }
 
-    //adds a *GENERAL* connection, as in someone is connected to the socket
     @Override
     public void addConnection(int connectionId, ConnectionHandler<String> handler) { 
 
@@ -140,7 +138,7 @@ public class ConnectionsImpl<T> implements Connections<String> {
         return false;
     }
     public void printMap(ConcurrentHashMap<Integer,Integer> map) {
-        // Uses the built-in forEach method
+
         map.forEach((k, v) -> System.out.println(k + ":" + v));
     }
 }

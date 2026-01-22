@@ -37,19 +37,18 @@ public abstract class BaseServer<T> implements Server<T> {
         try (ServerSocket serverSock = new ServerSocket(port)) {
 			System.out.println("Server started");
 
-            this.sock = serverSock; //just to be able to close
+            this.sock = serverSock; 
 
             while (!Thread.currentThread().isInterrupted()) {
 
                 Socket clientSock = serverSock.accept();
-                final int currentUserId = idCounter; //so theres no problem in the finally block
+                final int currentUserId = idCounter; 
                 idCounter++;
                 StompMessagingProtocol<T> protocol = stompProtocolFactory.get();
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<T>(
                     clientSock,
                     encdecFactory.get(),
                     protocol) {
-                // OVERRIDE RUN TO CATCH DISCONNECTS
 
                 @Override
                 public void run() {
@@ -63,7 +62,7 @@ public abstract class BaseServer<T> implements Server<T> {
             };
 
                 activeConnections.addConnection(currentUserId, handler);
-                protocol.start(currentUserId, activeConnections);// Supposed to add it to the acvtive connections itself, whichever class implements it
+                protocol.start(currentUserId, activeConnections);
 
                 execute(handler);
             }
