@@ -1,6 +1,0 @@
-{
-    "team a": "Argentina", "team b": "Brazil",
-    "events": [
-        { "event name": "Foul", "time": 200, "general game updates": {}, "team a updates": {}, "team b updates": {"cards": "yellow"}, "description": "Neymar down" }
-    ]
-}
